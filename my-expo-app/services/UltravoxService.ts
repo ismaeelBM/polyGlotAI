@@ -66,9 +66,9 @@ class UltravoxService {
       if (userSpeaksFirst) {
         body.firstSpeaker = 'FIRST_SPEAKER_USER';
       }
-      
+      console.log(JSON.stringify(body))
       // Make API call to create a call
-      const response = await fetch('https://api.ultravox.ai/api/calls', {
+      const response = await fetch('http://localhost:6996/api/calls', {
         method: 'POST',
         headers: {
           'X-API-Key': this.apiKey,
@@ -76,6 +76,8 @@ class UltravoxService {
         },
         body: JSON.stringify(body)
       });
+      console.log(JSON.stringify(body))
+      console.log(response)
       
       if (!response.ok) {
         throw new Error(`Failed to create call: ${response.status}`);

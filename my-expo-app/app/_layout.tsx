@@ -1,39 +1,58 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import 'react-native-reanimated';
+import { Platform } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { useColorScheme } from '@/hooks/useColorScheme';
-
-// Prevent the splash screen from auto-hiding before asset loading is complete.
-SplashScreen.preventAutoHideAsync();
+import { Audio } from 'expo-av';
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
-  const [loaded] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-  });
-
+  // Request audio permissions early
   useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
-
-  if (!loaded) {
-    return null;
-  }
-
+    const setupAudio = async () => {
+      try {
+        await Audio.requestPermissionsAsync();
+        
+        // Set up audio mode for both recording and playback
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: true,
+          playsInSilentModeIOS: true,
+          staysActiveInBackground: true,
+          shouldDuckAndroid: true,
+          playThroughEarpieceAndroid: false,
+        });
+        
+        console.log('Audio permissions and mode set up');
+      } catch (error) {
+        console.error('Failed to set up audio:', error);
+      }
+    };
+    
+    setupAudio();
+  }, []);
+  
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" />
+    <SafeAreaProvider>
+      <Stack
+        screenOptions={{
+          headerStyle: {
+            backgroundColor: '#fff',
+          },
+          headerTintColor: '#333',
+          headerShadowVisible: false,
+          headerTitleStyle: {
+            fontWeight: 'bold',
+          },
+          animation: Platform.OS === 'ios' ? 'default' : 'fade_from_bottom',
+        }}
+      >
+        <Stack.Screen 
+          name="index" 
+          options={{ 
+            title: 'Ultravox Demo',
+            headerShown: false,
+          }} 
+        />
       </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    </SafeAreaProvider>
   );
 }

@@ -84,6 +84,7 @@ class UltravoxService {
       }
       
       const data = await response.json();
+      console.log(data)
       return data.joinUrl;
     } catch (error) {
       console.error('Error creating call:', error);
@@ -257,8 +258,11 @@ class UltravoxService {
       recording.setProgressUpdateInterval(100); // 100ms chunks
       recording.setOnRecordingStatusUpdate(this._onRecordingStatusUpdate.bind(this));
       
-      await recording.startAsync();
+
+      console.log(this.currentRecording);
+      console.log(recording);
       this.currentRecording = recording;
+      await recording.startAsync();
       
       console.log('Audio streaming started');
     } catch (error) {

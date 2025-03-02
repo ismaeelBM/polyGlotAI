@@ -227,7 +227,8 @@ export default function UltravoxScreen() {
                 styles.messageBubble, 
                 msg.role === 'user' ? styles.userMessage : 
                 msg.role === 'assistant' ? styles.assistantMessage : 
-                styles.systemMessage
+                msg.role === 'system' ? styles.systemMessage : 
+                {}
               ]}
             >
               <Text 
@@ -242,7 +243,7 @@ export default function UltravoxScreen() {
           ))}
           
           {/* Show pending assistant response if any */}
-          {pendingAgentResponse && (
+          {pendingAgentResponse !== '' && (
             <View style={[styles.messageBubble, styles.assistantMessage, styles.pendingMessage]}>
               <Text style={styles.messageText}>{pendingAgentResponse}</Text>
             </View>

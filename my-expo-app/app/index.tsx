@@ -49,13 +49,12 @@ export default function Home() {
       
       <Link 
         href={"/ultravox" as any} 
-        asChild
-        >
+        asChild>
         <TouchableOpacity style={styles.startButton}>
-            <Text style={styles.startButtonText}>Start Voice Assistant</Text>
-            <Ionicons name="arrow-forward" size={20} color="white" />
+          <Text style={styles.startButtonText}>Start Voice Assistant</Text>
+          <Ionicons name="arrow-forward" size={20} color="white" />
         </TouchableOpacity>
-        </Link>
+      </Link>
       
       <Text style={styles.apiNote}>
         You'll need an Ultravox API key to use this app.

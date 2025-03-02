@@ -38,7 +38,7 @@ class UltravoxService {
       const {
         systemPrompt = 'You are a helpful assistant.',
         temperature = 0.8,
-        voice = null,
+        voice = "Mark",
         userSpeaksFirst = false,
       } = options;
       
@@ -64,11 +64,11 @@ class UltravoxService {
       }
       
       if (userSpeaksFirst) {
-        body.firstSpeaker = 'FIRST_SPEAKER_USER';
+        body.firstSpeaker = 'FIRST_SPEAKER_AGENT';
       }
-      
+      console.log(JSON.stringify(body))
       // Make API call to create a call
-      const response = await fetch('https://api.ultravox.ai/api/calls', {
+      const response = await fetch('http://localhost:6996/api/calls', {
         method: 'POST',
         headers: {
           'X-API-Key': this.apiKey,
@@ -76,12 +76,15 @@ class UltravoxService {
         },
         body: JSON.stringify(body)
       });
+      console.log(JSON.stringify(body))
+      console.log(response)
       
       if (!response.ok) {
         throw new Error(`Failed to create call: ${response.status}`);
       }
       
       const data = await response.json();
+      console.log(data)
       return data.joinUrl;
     } catch (error) {
       console.error('Error creating call:', error);
@@ -255,8 +258,11 @@ class UltravoxService {
       recording.setProgressUpdateInterval(100); // 100ms chunks
       recording.setOnRecordingStatusUpdate(this._onRecordingStatusUpdate.bind(this));
       
-      await recording.startAsync();
+
+      console.log(this.currentRecording);
+      console.log(recording);
       this.currentRecording = recording;
+      await recording.startAsync();
       
       console.log('Audio streaming started');
     } catch (error) {

@@ -38,7 +38,7 @@ class UltravoxService {
       const {
         systemPrompt = 'You are a helpful assistant.',
         temperature = 0.8,
-        voice = null,
+        voice = "Mark",
         userSpeaksFirst = false,
       } = options;
       
@@ -64,7 +64,7 @@ class UltravoxService {
       }
       
       if (userSpeaksFirst) {
-        body.firstSpeaker = 'FIRST_SPEAKER_USER';
+        body.firstSpeaker = 'FIRST_SPEAKER_AGENT';
       }
       console.log(JSON.stringify(body))
       // Make API call to create a call

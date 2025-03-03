@@ -6,172 +6,275 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Image,
   StatusBar,
+  ActivityIndicator,
+  Alert
 } from 'react-native';
 import { startCall, endCall, Role } from '../lib/callFunctions';
 import demoConfig from '../lib/demo-config';
-import CallStatus from '../components/CallStatus';
-import DebugMessages from '../components/DebugMessages';
-import MicToggleButton from '../components/MicToggleButton';
-import OrderDetails from '../components/OrderDetails';
-
-// Ultravox logo placeholder - in a real app, you'd use a proper image
-const UVLogo = () => (
-  <View style={styles.logoContainer}>
-    <Text style={styles.logo}>ULTRAVOX</Text>
-  </View>
-);
 
 const HomeScreen = () => {
   const [isCallActive, setIsCallActive] = useState(false);
-  const [agentStatus, setAgentStatus] = useState('off');
-  const [callTranscript, setCallTranscript] = useState([]);
-  const [callDebugMessages, setCallDebugMessages] = useState([]);
-  const [showUserTranscripts, setShowUserTranscripts] = useState(true);
-  const scrollViewRef = useRef(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [callStatus, setCallStatus] = useState('Inactive');
+  const [error, setError] = useState(null);
+  const callTimeoutRef = useRef(null);
 
+  // Inject CSS to ensure our UI remains visible
   useEffect(() => {
-    if (scrollViewRef.current) {
-      scrollViewRef.current.scrollToEnd({ animated: true });
+    // Create a style element to protect our UI
+    const styleElement = document.createElement('style');
+    styleElement.id = 'ultravox-protection-styles';
+    styleElement.innerHTML = `
+      /* Keep our app container always visible */
+      #root, body, html {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        height: 100% !important;
+        width: 100% !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        z-index: 9999 !important;
+        background-color: #121212 !important;
+      }
+      
+      /* Ensure our app UI gets priority */
+      .container, .safeArea, .conversationContainer, .header, .controlsContainer {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        z-index: 9999 !important;
+      }
+      
+      /* Hide any foreign elements that might be inserted */
+      body > *:not(#root):not(#ultravox-outer-container):not(script):not(style) {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        max-height: 0 !important;
+        max-width: 0 !important;
+        overflow: hidden !important;
+      }
+      
+      /* Extra protection for Ultravox container */
+      #ultravox-outer-container {
+        visibility: hidden !important;
+        opacity: 0 !important;
+        position: fixed !important;
+        top: -10000px !important;
+        left: -10000px !important;
+        width: 1px !important;
+        height: 1px !important;
+        pointer-events: none !important;
+        z-index: -9999 !important;
+        display: block !important;
+      }
+    `;
+    document.head.appendChild(styleElement);
+    
+    // Set up a watcher to make sure the styles don't get removed
+    const styleWatcher = setInterval(() => {
+      if (!document.getElementById('ultravox-protection-styles')) {
+        console.log('Protection styles removed, re-adding');
+        document.head.appendChild(styleElement.cloneNode(true));
+      }
+      
+      // Extra check to force HomeScreen visibility when call is active
+      if (isCallActive) {
+        // Force the container to be hidden
+        const container = document.getElementById('ultravox-outer-container');
+        if (container) {
+          container.style.position = 'fixed';
+          container.style.top = '-10000px';
+          container.style.left = '-10000px';
+          container.style.visibility = 'hidden';
+          container.style.opacity = '0';
+          container.style.pointerEvents = 'none';
+        }
+        
+        // Force the root element to be visible
+        const root = document.getElementById('root');
+        if (root) {
+          root.style.display = 'block';
+          root.style.visibility = 'visible';
+          root.style.opacity = '1';
+          root.style.zIndex = '9999';
+        }
+      }
+    }, 500);
+    
+    // Cleanup function
+    return () => {
+      clearInterval(styleWatcher);
+      const protectionStyles = document.getElementById('ultravox-protection-styles');
+      if (protectionStyles) {
+        document.head.removeChild(protectionStyles);
+      }
+    };
+  }, [isCallActive]);
+
+  // Safety timeout - if no response in 10 seconds, show error and reset
+  useEffect(() => {
+    if (isLoading) {
+      callTimeoutRef.current = setTimeout(() => {
+        if (isLoading) {
+          setIsLoading(false);
+          setError('The conversation is taking too long to start. Please try again.');
+        }
+      }, 10000);
     }
-  }, [callTranscript]);
-
-  const handleStatusChange = useCallback((status) => {
-    if (status) {
-      setAgentStatus(status);
-    } else {
-      setAgentStatus('off');
+    
+    return () => {
+      if (callTimeoutRef.current) {
+        clearTimeout(callTimeoutRef.current);
+      }
     }
-  }, []);
+  }, [isCallActive, isLoading]);
 
-  const handleTranscriptChange = useCallback((transcripts) => {
-    if (transcripts) {
-      setCallTranscript([...transcripts]);
-    }
-  }, []);
-
-  const handleDebugMessage = useCallback((debugMessage) => {
-    setCallDebugMessages(prevMessages => [...prevMessages, debugMessage]);
-  }, []);
-
-  const handleStartCallButtonClick = async (showDebugMessages = true) => {
+  const handleStartChat = async () => {
     try {
-      handleStatusChange('Starting call...');
-      setCallTranscript([]);
-      setCallDebugMessages([]);
+      // Clear any previous errors
+      setError(null);
+      setIsLoading(true);
+      setCallStatus('Starting conversation...');
 
-      // Setup our call config
+      // Only include parameters supported by the Ultravox API
       let callConfig = {
         systemPrompt: demoConfig.callConfig.systemPrompt,
         model: demoConfig.callConfig.model,
         languageHint: demoConfig.callConfig.languageHint,
         voice: demoConfig.callConfig.voice,
         temperature: demoConfig.callConfig.temperature,
-        selectedTools: demoConfig.callConfig.selectedTools,
+        selectedTools: [] // No tools for simple chat
       };
 
+      // Start the call in the current view
       await startCall({
         onStatusChange: handleStatusChange,
-        onTranscriptChange: handleTranscriptChange,
-        onDebugMessage: handleDebugMessage
-      }, callConfig, showDebugMessages);
-
-      setIsCallActive(true);
-      handleStatusChange('Call started successfully');
+        onTranscriptChange: () => {}, // Ignore transcripts
+        onDebugMessage: (msg) => console.log('Debug:', msg)
+      }, callConfig, true); // Enable debug to see what's happening
     } catch (error) {
-      handleStatusChange(`Error starting call: ${error.message}`);
+      console.error('Failed to start chat:', error);
+      setIsLoading(false);
+      setIsCallActive(false);
+      setError(`Failed to start conversation: ${error.message}`);
+      setCallStatus(`Error: ${error.message}`);
+      
+      // Show an alert to ensure the user knows something went wrong
+      Alert.alert(
+        'Error Starting Conversation',
+        `There was a problem starting the conversation: ${error.message}`,
+        [{ text: 'OK' }]
+      );
     }
   };
 
-  const handleEndCallButtonClick = async () => {
+  const handleEndChat = async () => {
     try {
-      handleStatusChange('Ending call...');
+      setIsLoading(true);
+      setCallStatus('Ending conversation...');
       await endCall();
       setIsCallActive(false);
-      handleStatusChange('Call ended successfully');
     } catch (error) {
-      handleStatusChange(`Error ending call: ${error.message}`);
+      console.error('Failed to end chat:', error);
+    } finally {
+      setIsLoading(false);
+      setCallStatus('Inactive');
+    }
+  };
+
+  const handleStatusChange = (status) => {
+    console.log('Call status changed:', status);
+    setCallStatus(status);
+    
+    if (status === 'active') {
+      setIsCallActive(true);
+      setIsLoading(false);
+    } else if (status === 'inactive' || status === 'ended' || status === 'error' || status.startsWith('Error')) {
+      setIsCallActive(false);
+      setIsLoading(false);
+    }
+  };
+
+  const handleEmergencyReset = () => {
+    setError(null);
+    setIsLoading(false);
+    setIsCallActive(false);
+    setCallStatus('Inactive');
+    
+    // Additional cleanup if needed
+    try {
+      endCall().catch(e => console.warn('Error during emergency reset:', e));
+    } catch (e) {
+      console.warn('Error during emergency reset:', e);
     }
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="light-content" backgroundColor="#000000" />
-      <View style={styles.container}>
+      <View style={styles.container} id="container">
         <View style={styles.header}>
-          <UVLogo />
-          <TouchableOpacity style={styles.contactButton}>
-            <Text style={styles.contactButtonText}>Get In Touch</Text>
-          </TouchableOpacity>
+          <Text style={styles.title}>Voice Assistant</Text>
+          <Text style={styles.subtitle}>
+            {isCallActive ? "Call is active" : "Ready to start"}
+          </Text>
         </View>
 
-        <View style={styles.mainContent}>
-          <View style={styles.actionArea}>
-            <Text style={styles.title}>{demoConfig.title}</Text>
-            <View style={styles.contentArea}>
-              <View style={styles.logoArea}>
-                <UVLogo />
+        {/* Conversation Area */}
+        <View style={styles.conversationContainer} id="conversationContainer">
+          <View style={styles.emptyConversation}>
+            {isLoading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#0B57D0" />
+                <Text style={styles.loadingText}>
+                  {callStatus || 'Starting conversation...'}
+                </Text>
               </View>
-              
-              {isCallActive ? (
-                <View style={styles.callArea}>
-                  <View style={styles.transcriptContainer}>
-                    <ScrollView
-                      ref={scrollViewRef}
-                      style={styles.transcriptScroll}
-                      contentContainerStyle={styles.transcriptContent}
-                    >
-                      {callTranscript && callTranscript.map((transcript, index) => (
-                        <View key={index}>
-                          {showUserTranscripts || transcript.speaker === 'agent' ? (
-                            <>
-                              <Text style={styles.speakerLabel}>
-                                {transcript.speaker === 'agent' ? "Ultravox" : "User"}
-                              </Text>
-                              <Text style={styles.transcriptText}>
-                                {transcript.text}
-                              </Text>
-                            </>
-                          ) : null}
-                        </View>
-                      ))}
-                    </ScrollView>
-                  </View>
-                  
-                  <View style={styles.controlsContainer}>
-                    <MicToggleButton role={Role.USER} />
-                    <TouchableOpacity
-                      style={styles.endCallButton}
-                      onPress={handleEndCallButtonClick}
-                      disabled={!isCallActive}
-                    >
-                      <Text style={styles.endCallButtonText}>📞 End Call</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              ) : (
-                <View style={styles.startCallContainer}>
-                  <Text style={styles.overviewText}>
-                    {demoConfig.overview}
-                  </Text>
-                  <TouchableOpacity
-                    style={styles.startCallButton}
-                    onPress={() => handleStartCallButtonClick(true)}
-                  >
-                    <Text style={styles.startCallButtonText}>Start Call</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            </View>
+            ) : (
+              <Text style={styles.emptyConversationText}>
+                Start a conversation to begin chatting
+              </Text>
+            )}
           </View>
-
-          <CallStatus status={agentStatus}>
-            <OrderDetails />
-          </CallStatus>
         </View>
 
-        <DebugMessages debugMessages={callDebugMessages} />
+        {/* Controls */}
+        <View style={styles.controlsContainer} id="controlsContainer">
+          <TouchableOpacity 
+            style={[
+              isCallActive ? styles.endButton : styles.startButton, 
+              isLoading && styles.disabledButton
+            ]} 
+            onPress={isCallActive ? handleEndChat : handleStartChat}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <ActivityIndicator size="small" color="white" />
+            ) : (
+              <Text style={styles.buttonText}>
+                {isCallActive ? "End Conversation" : "Start Conversation"}
+              </Text>
+            )}
+          </TouchableOpacity>
+          
+          {error && (
+            <TouchableOpacity 
+              style={styles.resetButton} 
+              onPress={handleEmergencyReset}
+            >
+              <Text style={styles.buttonText}>Reset</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -180,136 +283,99 @@ const HomeScreen = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: '#121212',
   },
   container: {
     flex: 1,
     padding: 16,
+    justifyContent: 'space-between',
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginVertical: 16,
-  },
-  contactButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderWidth: 2,
-    borderColor: 'white',
-    borderRadius: 3,
-  },
-  contactButtonText: {
-    color: 'white',
-    fontSize: 16,
-  },
-  mainContent: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#2A2A2A',
-    borderRadius: 3,
-    padding: 16,
-  },
-  actionArea: {
-    flex: 2,
+    paddingVertical: 16,
+    marginBottom: 8,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
     color: 'white',
-    marginBottom: 16,
+    marginBottom: 8,
   },
-  contentArea: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  logoArea: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  logoContainer: {
-    width: 75,
-    height: 75,
-    borderRadius: 38,
-    borderWidth: 2,
-    borderColor: 'white',
-    padding: 4,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'black',
-  },
-  logo: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 10,
-  },
-  callArea: {
-    flex: 1,
-  },
-  transcriptContainer: {
-    flex: 1,
-    marginBottom: 20,
-    position: 'relative',
-  },
-  transcriptScroll: {
-    flex: 1,
-    backgroundColor: '#121212',
-    borderRadius: 4,
-    padding: 10,
-  },
-  transcriptContent: {
-    paddingBottom: 16,
-  },
-  speakerLabel: {
-    color: '#999999',
-    fontSize: 14,
-    marginTop: 8,
-  },
-  transcriptText: {
-    color: 'white',
+  subtitle: {
     fontSize: 16,
-    marginBottom: 16,
+    color: '#AAA',
+  },
+  conversationContainer: {
+    flex: 1,
+    backgroundColor: '#1E1E1E',
+    borderRadius: 8,
+    marginVertical: 16,
+    overflow: 'hidden',
+  },
+  emptyConversation: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  emptyConversationText: {
+    color: '#999',
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    color: '#AAA',
+    marginTop: 16,
+    fontSize: 16,
+    textAlign: 'center',
   },
   controlsContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 16,
-  },
-  endCallButton: {
-    flex: 1,
-    height: 40,
-    backgroundColor: '#FF0000',
     justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 8,
-  },
-  endCallButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  startCallContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'stretch',
     padding: 16,
+    gap: 8,
   },
-  overviewText: {
-    color: '#AAAAAA',
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  startCallButton: {
-    padding: 12,
-    borderWidth: 2,
-    borderColor: 'white',
+  startButton: {
+    backgroundColor: '#0B57D0',
+    borderRadius: 24,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    flex: 1,
     alignItems: 'center',
+    minHeight: 48,
+    justifyContent: 'center',
   },
-  startCallButtonText: {
+  disabledButton: {
+    backgroundColor: '#0B57D0AA',
+  },
+  endButton: {
+    backgroundColor: '#D32F2F',
+    borderRadius: 24,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+  },
+  resetButton: {
+    backgroundColor: '#E65100',
+    borderRadius: 24,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+    marginLeft: 8,
+    width: 100,
+  },
+  buttonText: {
     color: 'white',
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '600',
   },
 });
 

@@ -1,122 +1,166 @@
-# Ultravox Client Tools - Mobile Documentation
+# Ultravox Mobile Chat - Documentation
 
 ## Overview
 
-The Ultravox Mobile Client is a React Native application that provides a mobile interface for interacting with the Ultravox voice AI platform. This documentation covers the key components, architecture, and usage of the mobile client.
+Ultravox Mobile Chat is a simple React Native application that provides a clean interface for interacting with the Ultravox voice AI platform. This minimalist app allows users to start a conversation with an AI assistant, speak naturally, and receive voice responses.
 
 ## Architecture
 
-The application follows a modular architecture with the following key components:
+The application follows a streamlined architecture with the following components:
 
 ### Core Libraries
 
-- **types.js**: Defines the data structures and enums used throughout the application
-- **demo-config.js**: Contains the configuration for the demo, including system prompt and tool definitions
-- **callFunctions.js**: Handles the core functionality for managing calls with the Ultravox API
-- **clientTools.js**: Implements client-side tools that can be called by the AI agent
+- **types.js**: Defines basic data structures and enums
+- **demo-config.js**: Contains the minimal configuration for the chat assistant
+- **callFunctions.js**: Handles the core functionality for managing voice conversations
 
 ### UI Components
 
-- **Toggle.js**: A reusable toggle switch component
-- **MicToggleButton.js**: Button for toggling microphone mute state
-- **CallStatus.js**: Displays the current status of the call
-- **DebugMessages.js**: Shows debug messages during development
-- **OrderDetails.js**: Displays order information updated by the AI agent
+- **MicToggleButton.js**: Button for toggling microphone mute state during conversations
 
 ### Screens
 
-- **HomeScreen.js**: The main screen of the application, integrating all components
+- **HomeScreen.js**: The main screen with a clean conversational interface
 
-## Call Flow
+## Conversation Flow
 
-1. **Initialization**: The app initializes with the HomeScreen component
-2. **Start Call**: User presses "Start Call" button, which:
-   - Creates a call configuration
-   - Sends a request to the Ultravox API
-   - Initializes a UltravoxSession
-   - Registers tool implementations
-3. **During Call**:
-   - Audio is streamed to/from the Ultravox service
-   - Transcripts are displayed in real-time
-   - The AI agent can call tools like "updateOrder"
-   - Order details are updated and displayed
-4. **End Call**: User presses "End Call" button, which:
-   - Terminates the UltravoxSession
-   - Resets the UI state
+1. **Start**: User presses "Start Conversation" button
+2. **Interaction**: User speaks and hears AI responses
+3. **End**: User presses "End Conversation" button
 
-## Tool Implementation
+## User Interface
 
-The app demonstrates how to implement client-side tools that can be called by the AI agent:
+The app features a minimal, conversation-focused interface:
+
+1. **Header**: Shows the app title and current status
+2. **Conversation Area**: Displays the ongoing conversation with message bubbles
+3. **Controls**: 
+   - Start Conversation button (when inactive)
+   - Mic Toggle and End Conversation buttons (when active)
+
+## Implementation Details
+
+### Backend Connection
+
+The app connects to a backend server that proxies requests to the Ultravox API:
 
 ```javascript
-// Example from clientTools.js
-export const updateOrderTool = (parameters) => {
-  const { ...orderData } = parameters;
-  console.log("Received order details update:", orderData.orderDetailsData);
-
-  // In React Native, we use a callback approach for state management
-  if (typeof global.orderUpdateCallback === 'function') {
-    global.orderUpdateCallback(orderData.orderDetailsData);
-  }
-
-  return "Updated the order details.";
-};
+// Backend server URL
+const BACKEND_SERVER_URL = 'http://localhost:3000';
 ```
 
-## Demo Configuration
+### AI Configuration
 
-The demo is configured as a "Dr. Donut" drive-thru ordering system with:
+The chat assistant configuration is separated into two parts:
 
-- A detailed system prompt that defines the agent's behavior
-- Menu items with prices
-- Tool definitions for updating orders
-- Voice configuration
+1. **API Parameters** - These are sent to the Ultravox API during call creation:
+
+```javascript
+// API call parameters (must be valid for the Ultravox API)
+callConfig: {
+  systemPrompt: getSystemPrompt(),
+  model: "fixie-ai/ultravox-70B",
+  languageHint: "en",
+  selectedTools: [],
+  voice: "terrence",
+  temperature: 0.4
+}
+```
+
+2. **Client-Side Configuration** - These control the behavior of the Ultravox session in the browser:
+
+```javascript
+// Client-side UI and session configuration (not sent to API)
+clientConfig: {
+  preventRedirect: true,
+  inlineProcessing: true,
+  disablePageReplacement: true,
+  embeddedMode: true,
+  containInParent: true,
+  preventDOMManipulation: true,
+  keepButtonsVisible: true
+}
+```
+
+### Preventing UI Replacement
+
+To prevent the Ultravox session from replacing your UI with a white screen:
+
+1. Create a hidden container for the Ultravox session:
+```javascript
+const ultravoxContainer = document.createElement('div');
+ultravoxContainer.id = 'ultravox-container';
+ultravoxContainer.style.display = 'none';
+ultravoxContainer.style.position = 'absolute';
+ultravoxContainer.style.top = '-9999px';
+document.body.appendChild(ultravoxContainer);
+```
+
+2. Use the container when initializing the session:
+```javascript
+uvSession = new UltravoxSession({ 
+  preventRedirect: true,
+  disablePageReplacement: true,
+  embeddedMode: true,
+  containerElement: ultravoxContainer,
+  preventUIReplacement: true
+});
+```
+
+3. Pass the same options when joining the call:
+```javascript
+await uvSession.joinCall(joinUrl, { 
+  preventNavigation: true,
+  disablePageReplacement: true,
+  embeddedMode: true,
+  keepExistingUI: true
+});
+```
+
+### Error Handling
+
+The application includes several error handling mechanisms:
+
+1. Safety timeout that resets if starting a conversation takes too long
+2. Error display in the UI
+3. Emergency reset button that appears when there's an error
+4. Proper cleanup when ending conversations
 
 ## Development Notes
-
-### Mock Implementation
-
-The current implementation uses mock functionality for the Ultravox client. In a production environment, you would:
-
-1. Import and use the actual Ultravox client library
-2. Implement proper authentication
-3. Handle audio permissions and recording
-4. Add error handling and retry logic
 
 ### Testing
 
 To test the application:
 
-1. Start the app with `npm start`
-2. Use the Expo client on your device or simulator
-3. Press "Start Call" to begin a simulated conversation
-4. Speak to the AI agent (simulated in the mock implementation)
-5. Test the microphone mute functionality
-6. End the call when finished
+1. Start the backend server with `node server.js`
+2. Start the app with `npm start`
+3. Use the Expo client on your device or simulator
+4. Press "Start Conversation" to begin
+5. Speak to the AI assistant
+6. Test the microphone mute functionality
+7. End the conversation when finished
 
-## Customization
+### Important API Notes
 
-To customize the app for your own use case:
+When working with the Ultravox API:
 
-1. Modify the system prompt in `demo-config.js`
-2. Update the tool definitions to match your requirements
-3. Customize the UI components as needed
-4. Replace the mock implementation with the actual Ultravox client
+1. **Valid API Parameters**: Only send parameters that are explicitly supported by the API:
+   - `systemPrompt`, `temperature`, `model`, `voice`, `languageHint`, `initialMessages`, 
+   - `joinTimeout`, `maxDuration`, `timeExceededMessage`, `inactivityMessages`, 
+   - `selectedTools`, `medium`, `recordingEnabled`, `firstSpeaker`, 
+   - `transcriptOptional`, `initialOutputMedium`, `vadSettings`, 
+   - `firstSpeakerSettings`, `experimentalSettings`
 
-## Troubleshooting
+2. **Client-Side Only Options**: These options should only be used when creating the UltravoxSession or joining a call, not when creating the call via API:
+   - `preventRedirect`, `disablePageReplacement`, `embeddedMode`, 
+   - `preventUIReplacement`, `containerElement`, etc.
 
-Common issues:
+### Future Enhancements
 
-1. **Audio permissions**: Ensure your app has the necessary permissions for microphone access
-2. **Network connectivity**: Check that your device can reach the Ultravox API
-3. **Tool implementation**: Verify that your tool implementations match the expected schema
+Potential improvements for this simple application:
 
-## Future Enhancements
-
-Potential improvements for the application:
-
-1. Add authentication and user management
-2. Implement persistent conversation history
-3. Add support for multiple AI agents/personas
-4. Enhance the UI with animations and transitions
-5. Add offline mode capabilities 
+1. Add conversation history persistence
+2. Implement user preferences for AI voice
+3. Add theme options for the interface
+4. Support for text input as an alternative to voice
+5. Accessibility improvements 

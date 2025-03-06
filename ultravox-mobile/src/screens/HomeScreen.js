@@ -26,60 +26,89 @@ const HomeScreen = () => {
     const styleElement = document.createElement('style');
     styleElement.id = 'ultravox-protection-styles';
     styleElement.innerHTML = `
-      /* Keep our app container always visible */
-      #root, body, html {
-        display: block !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-        pointer-events: auto !important;
-        height: 100% !important;
-        width: 100% !important;
-        position: fixed !important;
-        top: 0 !important;
-        left: 0 !important;
-        right: 0 !important;
-        bottom: 0 !important;
-        z-index: 9999 !important;
-        background-color: #121212 !important;
+      /* Reset any potential inherited styles */
+      * {
+        box-sizing: border-box !important;
       }
-      
-      /* Ensure our app UI gets priority */
-      .container, .safeArea, .conversationContainer, .header, .controlsContainer {
-        display: block !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-        pointer-events: auto !important;
-        z-index: 9999 !important;
-      }
-      
-      /* Hide any foreign elements that might be inserted */
-      body > *:not(#root):not(#ultravox-outer-container):not(script):not(style) {
-        display: none !important;
-        visibility: hidden !important;
-        opacity: 0 !important;
-        pointer-events: none !important;
-        max-height: 0 !important;
-        max-width: 0 !important;
-        overflow: hidden !important;
-      }
-      
-      /* Extra protection for Ultravox container */
-      #ultravox-outer-container {
+
+      /* Extra protection for Ultravox container and its children */
+      #ultravox-outer-container,
+      #ultravox-container,
+      #ultravox-isolation-frame,
+      #ultravox-iframe-container,
+      [id*="ultravox"] {
         visibility: hidden !important;
         opacity: 0 !important;
         position: fixed !important;
         top: -10000px !important;
         left: -10000px !important;
-        width: 1px !important;
-        height: 1px !important;
+        width: 0 !important;
+        height: 0 !important;
+        min-height: 0 !important;
+        max-height: 0 !important;
+        min-width: 0 !important;
+        max-width: 0 !important;
         pointer-events: none !important;
         z-index: -9999 !important;
+        display: none !important;
+        overflow: hidden !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+        transform: scale(0) !important;
+        flex: 0 0 0 !important;
+        position: absolute !important;
+        clip: rect(0, 0, 0, 0) !important;
+        clip-path: inset(50%) !important;
+      }
+
+      /* Force all Ultravox iframes to be contained */
+      iframe[id*="ultravox"],
+      iframe[title*="Ultravox"] {
+        width: 0 !important;
+        height: 0 !important;
+        position: absolute !important;
+        top: -10000px !important;
+        left: -10000px !important;
+        border: 0 !important;
+        display: none !important;
+      }
+
+      /* Ensure our app container stays fixed size */
+      #root {
+        all: initial !important;
         display: block !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        max-width: 100vw !important;
+        max-height: 100vh !important;
+        overflow: hidden !important;
+        background: #121212 !important;
+        z-index: 999999 !important;
+      }
+
+      /* Reset any potential flex or grid properties */
+      #root * {
+        flex: initial !important;
+        grid: initial !important;
+      }
+
+      /* Conversation container specific constraints */
+      #conversationContainer {
+        height: auto !important;
+        max-height: calc(100vh - 200px) !important;
+        overflow-y: auto !important;
+        flex: 1 !important;
+        position: relative !important;
+        transform: none !important;
       }
     `;
     document.head.appendChild(styleElement);
     
-    // Set up a watcher to make sure the styles don't get removed
+    // Set up a more aggressive watcher to maintain our styles
     const styleWatcher = setInterval(() => {
       if (!document.getElementById('ultravox-protection-styles')) {
         console.log('Protection styles removed, re-adding');
@@ -87,28 +116,52 @@ const HomeScreen = () => {
       }
       
       // Extra check to force HomeScreen visibility when call is active
-      if (isCallActive) {
-        // Force the container to be hidden
+      if (!isCallActive) {
+        // Force the container to be hidden more aggressively
         const container = document.getElementById('ultravox-outer-container');
         if (container) {
-          container.style.position = 'fixed';
-          container.style.top = '-10000px';
-          container.style.left = '-10000px';
-          container.style.visibility = 'hidden';
-          container.style.opacity = '0';
-          container.style.pointerEvents = 'none';
+          Object.assign(container.style, {
+            position: 'fixed',
+            top: '-9999px',
+            left: '-9999px',
+            visibility: 'hidden',
+            opacity: '0',
+            pointerEvents: 'none',
+            width: '0',
+            height: '0',
+            minHeight: '0',
+            maxHeight: '0',
+            overflow: 'hidden',
+            display: 'none',
+            margin: '0',
+            padding: '0',
+            border: 'none',
+            transform: 'scale(0)'
+          });
         }
         
-        // Force the root element to be visible
+        // Force the root element to be visible and constrained
         const root = document.getElementById('root');
         if (root) {
-          root.style.display = 'block';
-          root.style.visibility = 'visible';
-          root.style.opacity = '1';
-          root.style.zIndex = '9999';
+          Object.assign(root.style, {
+            display: 'block',
+            visibility: 'visible',
+            opacity: '1',
+            zIndex: '2',
+            height: '100vh',
+            maxHeight: '100vh',
+            width: '100vw',
+            maxWidth: '100vw',
+            overflow: 'hidden',
+            position: 'fixed',
+            top: '0',
+            left: '0',
+            margin: '0',
+            padding: '0'
+          });
         }
       }
-    }, 500);
+    }, 100); // More frequent checks
     
     // Cleanup function
     return () => {
@@ -229,42 +282,104 @@ const HomeScreen = () => {
           </Text>
         </View>
 
-        {/* Conversation Area */}
-        <View style={styles.conversationContainer} id="conversationContainer">
-          <View style={styles.emptyConversation}>
-            {isLoading ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#0B57D0" />
-                <Text style={styles.loadingText}>
-                  {callStatus || 'Starting conversation...'}
-                </Text>
-              </View>
-            ) : (
-              <Text style={styles.emptyConversationText}>
-                Start a conversation to begin chatting
-              </Text>
-            )}
-          </View>
-        </View>
-
-        {/* Controls */}
-        <View style={styles.controlsContainer} id="controlsContainer">
-          <TouchableOpacity 
-            style={[
-              isCallActive ? styles.endButton : styles.startButton, 
-              isLoading && styles.disabledButton
-            ]} 
-            onPress={isCallActive ? handleEndChat : handleStartChat}
-            disabled={isLoading}
+        {/* Conversation Area - Complete overhaul */}
+        <div 
+          style={{
+            position: 'fixed',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: '300px',
+            height: '200px',
+            backgroundColor: '#1E1E1E',
+            borderRadius: '8px',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1,
+          }}
+          id="conversationContainer"
+        >
+          <div 
+            style={{
+              position: 'absolute',
+              width: '200px',
+              height: '20px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              overflow: 'hidden',
+              padding: 0,
+              margin: 0,
+              top: '40%',
+              transform: 'translateY(-50%)',
+            }}
           >
-            {isLoading ? (
-              <ActivityIndicator size="small" color="white" />
-            ) : (
-              <Text style={styles.buttonText}>
-                {isCallActive ? "End Conversation" : "Start Conversation"}
-              </Text>
-            )}
-          </TouchableOpacity>
+            <div
+              style={{
+                position: 'absolute',
+                width: '200px',
+                height: '20px',
+                lineHeight: '20px',
+                color: '#999',
+                fontSize: '16px',
+                textAlign: 'center',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                userSelect: 'none',
+                pointerEvents: 'none',
+              }}
+            >
+              {isCallActive ? 'Call Active' : 'Start'}
+            </div>
+          </div>
+          
+          {isCallActive && (
+            <div
+              onClick={handleEndChat}
+              style={{
+                position: 'absolute',
+                bottom: '40px',
+                width: '120px',
+                height: '36px',
+                backgroundColor: '#D32F2F',
+                borderRadius: '18px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                userSelect: 'none',
+                border: 'none',
+                outline: 'none',
+                color: 'white',
+                fontSize: '14px',
+                fontWeight: '600',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+              }}
+            >
+              End Call
+            </div>
+          )}
+        </div>
+
+        {/* Remove the old controls section since we have the end button in the container */}
+        <View style={styles.controlsContainer} id="controlsContainer">
+          {!isCallActive && (
+            <TouchableOpacity 
+              style={[styles.startButton, isLoading && styles.disabledButton]} 
+              onPress={handleStartChat}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <ActivityIndicator size="small" color="white" />
+              ) : (
+                <Text style={styles.buttonText}>Start Conversation</Text>
+              )}
+            </TouchableOpacity>
+          )}
           
           {error && (
             <TouchableOpacity 
@@ -305,22 +420,43 @@ const styles = StyleSheet.create({
     color: '#AAA',
   },
   conversationContainer: {
-    flex: 1,
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    width: '300px',
+    height: '200px',
     backgroundColor: '#1E1E1E',
-    borderRadius: 8,
-    marginVertical: 16,
+    borderRadius: '8px',
     overflow: 'hidden',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   emptyConversation: {
-    flex: 1,
-    justifyContent: 'center',
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    display: 'flex',
     alignItems: 'center',
-    padding: 16,
+    justifyContent: 'center',
+    padding: 0,
+    margin: 0,
+    overflow: 'hidden',
   },
   emptyConversationText: {
+    position: 'absolute',
+    width: '200px',
+    height: '20px',
+    lineHeight: '20px',
     color: '#999',
-    fontSize: 16,
+    fontSize: '16px',
     textAlign: 'center',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    userSelect: 'none',
+    pointerEvents: 'none',
   },
   loadingContainer: {
     alignItems: 'center',

@@ -172,62 +172,75 @@ function prepareSessionContainer() {
   // Create a container div that will hold our iframe
   const containerDiv = document.createElement('div');
   containerDiv.id = 'ultravox-outer-container';
-  containerDiv.style.position = 'fixed';
-  containerDiv.style.opacity = '0';  // Completely invisible but still functional
-  containerDiv.style.pointerEvents = 'none';  // Don't intercept user interactions
-  containerDiv.style.top = '-1000px';  // Position it far outside the viewport
-  containerDiv.style.left = '-1000px';
-  containerDiv.style.width = '1px';
-  containerDiv.style.height = '1px';
-  containerDiv.style.overflow = 'hidden';
-  containerDiv.style.zIndex = '-9999';  // Behind everything
-  containerDiv.style.display = 'block !important';
-  containerDiv.style.visibility = 'hidden !important';
+  
+  // Apply strict containment styles
+  const containmentStyles = {
+    position: 'fixed',
+    opacity: '0',
+    pointerEvents: 'none',
+    top: '-10000px',
+    left: '-10000px',
+    width: '0',
+    height: '0',
+    overflow: 'hidden',
+    zIndex: '-9999',
+    display: 'none',
+    visibility: 'hidden',
+    transform: 'scale(0)',
+    margin: '0',
+    padding: '0',
+    border: 'none',
+    minWidth: '0',
+    minHeight: '0',
+    maxWidth: '0',
+    maxHeight: '0',
+    flex: '0 0 0',
+    boxSizing: 'border-box'
+  };
+  
+  Object.assign(containerDiv.style, containmentStyles);
   containerDiv.setAttribute('aria-hidden', 'true');
-  containerDiv.style.transform = 'translateX(-10000px)';
-
-  // Create inner div for the Ultravox content
+  
+  // Create inner div with same strict containment
   const innerDiv = document.createElement('div');
   innerDiv.id = 'ultravox-container';
-  innerDiv.style.width = '1px';
-  innerDiv.style.height = '1px';
-  innerDiv.style.position = 'absolute';
-  innerDiv.style.pointerEvents = 'none';
-  innerDiv.style.opacity = '0';
+  Object.assign(innerDiv.style, containmentStyles);
   containerDiv.appendChild(innerDiv);
 
-  // Create an iframe for additional isolation
+  // Create an iframe with same strict containment
   const iframe = document.createElement('iframe');
   iframe.id = 'ultravox-isolation-frame';
-  iframe.style.width = '1px';
-  iframe.style.height = '1px';
-  iframe.style.border = 'none';
-  iframe.style.position = 'absolute';
-  iframe.style.pointerEvents = 'none';
-  iframe.style.opacity = '0';
-  iframe.style.display = 'block';
+  Object.assign(iframe.style, containmentStyles);
   iframe.title = 'Ultravox Isolated Container';
   iframe.setAttribute('aria-hidden', 'true');
   iframe.setAttribute('tabindex', '-1');
+  iframe.setAttribute('scrolling', 'no');
+  iframe.setAttribute('allowtransparency', 'true');
   
   // Add the iframe to our container
   containerDiv.appendChild(iframe);
 
-  // Add to document
-  document.body.appendChild(containerDiv);
+  // Add to document but within a zero-size container
+  const zeroContainer = document.createElement('div');
+  Object.assign(zeroContainer.style, containmentStyles);
+  zeroContainer.appendChild(containerDiv);
+  document.body.appendChild(zeroContainer);
 
-  // Try to use the iframe's document for further isolation if possible
+  // Try to use the iframe's document for further isolation
   let iframeElement;
   try {
     if (iframe.contentWindow && iframe.contentWindow.document) {
       const iframeDoc = iframe.contentWindow.document;
-      iframeDoc.body.style.margin = '0';
-      iframeDoc.body.style.padding = '0';
+      Object.assign(iframeDoc.body.style, containmentStyles);
       
       // Create an element inside the iframe
       iframeElement = iframeDoc.createElement('div');
       iframeElement.id = 'ultravox-iframe-container';
+      Object.assign(iframeElement.style, containmentStyles);
       iframeDoc.body.appendChild(iframeElement);
+      
+      // Add strict containment styles to the iframe's HTML and body
+      Object.assign(iframeDoc.documentElement.style, containmentStyles);
     }
   } catch (e) {
     console.warn('Could not access iframe document, using standard container instead:', e);

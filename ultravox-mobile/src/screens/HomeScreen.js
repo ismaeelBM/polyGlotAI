@@ -36,7 +36,7 @@ const HomeScreen = () => {
         clearTimeout(callTimeoutRef.current);
       }
     }
-  }, [isCallActive, isLoading]);
+  }, [isLoading]);
 
   const handleStartChat = async () => {
     try {
@@ -58,7 +58,7 @@ const HomeScreen = () => {
       // Start the call with cleaner approach
       await startCall({
         onStatusChange: handleStatusChange,
-        onTranscriptChange: recordTranscripts, // Ignore transcripts
+        onTranscriptChange: () => {}, // Ignore transcripts
         onDebugMessage: (msg) => console.log('Debug:', msg)
       }, callConfig);
     } catch (error) {
@@ -91,10 +91,6 @@ const HomeScreen = () => {
     }
   };
 
-  const recordTranscripts = (transcript) => {
-    // TODO: In case it needs to be implemented
-  }
-
   const handleStatusChange = (status, transcript) => {
     // alert("Call status now: " + status.toString());
     console.log('Call status changed:', status);
@@ -111,7 +107,7 @@ const HomeScreen = () => {
       setIsCallActive(false);
       setIsLoading(false);
     } else {
-      error.log("Unknown status received: ", status);
+      console.log("Warning: Unknown status received: ", status);
       setIsCallActive(false);
       setIsLoading(false);
     }

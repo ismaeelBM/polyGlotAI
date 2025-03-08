@@ -92,7 +92,7 @@ const HomeScreen = () => {
   };
 
   const recordTranscripts = (transcript) => {
-    
+    // TODO: In case it needs to be implemented
   }
 
   const handleStatusChange = (status, transcript) => {
@@ -114,20 +114,6 @@ const HomeScreen = () => {
       error.log("Unknown status received: ", status);
       setIsCallActive(false);
       setIsLoading(false);
-    }
-  };
-
-  const handleEmergencyReset = () => {
-    setError(null);
-    setIsLoading(false);
-    setIsCallActive(false);
-    setCallStatus('Inactive');
-    
-    // Additional cleanup if needed
-    try {
-      endCall().catch(e => console.warn('Error during emergency reset:', e));
-    } catch (e) {
-      console.warn('Error during emergency reset:', e);
     }
   };
 
@@ -173,15 +159,6 @@ const HomeScreen = () => {
               ) : (
                 <Text style={styles.buttonText}>Start Conversation</Text>
               )}
-            </TouchableOpacity>
-          )}
-          
-          {error && (
-            <TouchableOpacity 
-              style={styles.resetButton} 
-              onPress={handleEmergencyReset}
-            >
-              <Text style={styles.buttonText}>Reset</Text>
             </TouchableOpacity>
           )}
         </View>

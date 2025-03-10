@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Mobile-specific base styles */
+html, body {
+  @apply antialiased text-base;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: contain;
+}
+
+/* Custom utility classes */
+@layer utilities {
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
+  
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+/* Page transitions */
+.page-transition-enter {
+  transform: translateX(100%);
+}
+
+.page-transition-enter-active {
+  transform: translateX(0);
+  transition: transform 300ms ease-out;
+}
+
+.page-transition-exit {
+  transform: translateX(0);
+}
+
+.page-transition-exit-active {
+  transform: translateX(-100%);
+  transition: transform 300ms ease-out;
+}
+
+/* Loading animation */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+} 

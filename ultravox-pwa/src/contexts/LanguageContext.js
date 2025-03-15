@@ -8,8 +8,7 @@ export function useLanguage() {
 
 export function LanguageProvider({ children }) {
   const [selectedTutor, setSelectedTutor] = useState(null);
-  const [selectedScenario, setSelectedScenario] = useState(null);
-  const [difficultyLevel, setDifficultyLevel] = useState(1);
+  
   const [tutors] = useState([
     {
       id: 1,
@@ -100,72 +99,31 @@ export function LanguageProvider({ children }) {
       voice: "Haytham-Arabic-Egyptian"
     }
   ]);
-  
-  const [scenarios] = useState([
-    { id: 1, name: "At the Café", description: "Order drinks and snacks, chat with the barista" },
-    { id: 2, name: "Shopping Trip", description: "Browse items, ask questions, make purchases" },
-    { id: 3, name: "Making Plans", description: "Arrange to meet friends, suggest activities" },
-    { id: 4, name: "Getting Directions", description: "Ask how to get somewhere, understand directions" },
-    { id: 5, name: "Business Meeting", description: "Participate in a professional meeting, discuss projects" },
-    { id: 6, name: "Job Interview", description: "Practice common interview questions and professional responses" },
-    { id: 7, name: "Restaurant Order", description: "Order food, ask about ingredients, make special requests" },
-    { id: 8, name: "Phone Conversation", description: "Handle typical phone calls like making appointments or reservations" }
-  ]);
 
-  // Load saved state from local storage
+  // Load saved tutor from local storage
   useEffect(() => {
     const savedTutor = localStorage.getItem('selectedTutor');
-    const savedScenario = localStorage.getItem('selectedScenario');
-    const savedDifficulty = localStorage.getItem('difficultyLevel');
-    
     if (savedTutor) setSelectedTutor(JSON.parse(savedTutor));
-    if (savedScenario) setSelectedScenario(JSON.parse(savedScenario));
-    if (savedDifficulty) setDifficultyLevel(parseInt(savedDifficulty));
   }, []);
 
-  // Save state to local storage when changed
+  // Save tutor to local storage when changed
   useEffect(() => {
     if (selectedTutor) {
       localStorage.setItem('selectedTutor', JSON.stringify(selectedTutor));
     }
-    if (selectedScenario) {
-      localStorage.setItem('selectedScenario', JSON.stringify(selectedScenario));
-    }
-    localStorage.setItem('difficultyLevel', difficultyLevel.toString());
-  }, [selectedTutor, selectedScenario, difficultyLevel]);
+  }, [selectedTutor]);
 
-  // Clear selections
+  // Clear selected tutor
   const clearSelections = () => {
     setSelectedTutor(null);
-    setSelectedScenario(null);
-    setDifficultyLevel(1);
     localStorage.removeItem('selectedTutor');
-    localStorage.removeItem('selectedScenario');
-    localStorage.setItem('difficultyLevel', '1');
-  };
-
-  // Find a tutor by ID
-  const getTutorById = (id) => {
-    return tutors.find(tutor => tutor.id === parseInt(id));
-  };
-
-  // Find a scenario by ID
-  const getScenarioById = (id) => {
-    return scenarios.find(scenario => scenario.id === parseInt(id));
   };
 
   const value = {
     tutors,
-    scenarios,
     selectedTutor,
     setSelectedTutor,
-    selectedScenario,
-    setSelectedScenario,
-    difficultyLevel,
-    setDifficultyLevel,
-    clearSelections,
-    getTutorById,
-    getScenarioById
+    clearSelections
   };
 
   return (

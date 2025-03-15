@@ -30,19 +30,12 @@ export function toggleMute(role) {
 }
 
 /**
- * Create a system prompt based on the current language learning context
+ * Create a system prompt based on the tutor information
+ * Simplified to not depend on scenario or difficulty level
  */
-export function generateSystemPrompt(tutor, scenario, difficulty) {
-  // Set difficulty level text
-  const difficultyText = difficulty === 1 ? 'beginner' : 
-                         difficulty === 2 ? 'intermediate' : 'advanced';
-  
+export function generateSystemPrompt(tutor) {
   return `You are ${tutor.name}, a ${tutor.language} language learning assistant specializing in ${tutor.specialty}. 
-Your role is to help the student practice ${tutor.language}".
-
-Difficulty level: ${difficultyText}. ${difficulty === 1 ? 'Use simple vocabulary and speak slowly.' : 
-                       difficulty === 2 ? 'Use moderate vocabulary and natural speed.' : 
-                       'Use advanced vocabulary, idioms, and normal conversational speed.'}
+Your role is to help the student practice ${tutor.language}.
 
 Your goal is to:
 1. Have a conversation with the student in ${tutor.language}
@@ -66,7 +59,6 @@ export async function createCall(callConfig) {
       temperature: callConfig.temperature || 0.4,
       model: callConfig.model || "fixie-ai/ultravox-70B",
       voice: callConfig.voice, 
-      // languageHint: callConfig.languageHint,
       selectedTools: callConfig.selectedTools || []
     };
     
@@ -78,7 +70,7 @@ export async function createCall(callConfig) {
     return callData;
   } catch (error) {
     console.error('Error creating call:', error);
-    throw error;
+    throw new Error(`Failed to create call: ${error.message}`);
   }
 }
 
@@ -108,7 +100,7 @@ export async function startCall(callbacks, callConfig, showDebugMessages) {
       uvSession = null;
     }
     
-    // Start up our Ultravox Session - EXACT MATCH TO WORKING EXAMPLE
+    // Start up our Ultravox Session
     uvSession = new UltravoxSession({ experimentalMessages: debugMessages });
     
     if (showDebugMessages) {
@@ -116,13 +108,17 @@ export async function startCall(callbacks, callConfig, showDebugMessages) {
     }
     
     if (uvSession) {
-      // Set up event listeners - EXACT MATCH TO WORKING EXAMPLE
+      // Set up event listeners
       uvSession.addEventListener('status', (event) => {
-        callbacks.onStatusChange(uvSession?.status, uvSession?.transcripts);
+        if (callbacks?.onStatusChange) {
+          callbacks.onStatusChange(uvSession?.status, uvSession?.transcripts);
+        }
       });
       
       uvSession.addEventListener('transcripts', (event) => {
-        callbacks.onTranscriptChange(uvSession?.transcripts);
+        if (callbacks?.onTranscriptChange) {
+          callbacks.onTranscriptChange(uvSession?.transcripts);
+        }
       });
       
       if (callbacks?.onDebugMessage) {
@@ -134,9 +130,11 @@ export async function startCall(callbacks, callConfig, showDebugMessages) {
       
       // Add a manual status check after 5 seconds in case we don't get events
       setTimeout(() => {
-        console.log('Manual status check after 5 seconds:', uvSession?.status);
-        if (uvSession?.status && callbacks?.onStatusChange) {
-          callbacks.onStatusChange(uvSession.status, uvSession.transcripts);
+        if (uvSession) {
+          console.log('Manual status check after 5 seconds:', uvSession?.status);
+          if (uvSession?.status && callbacks?.onStatusChange) {
+            callbacks.onStatusChange(uvSession.status, uvSession.transcripts);
+          }
         }
       }, 5000);
       
@@ -181,7 +179,7 @@ export async function endCall() {
     uvSession = null;
   }
   
-  // Dispatch an event when the call ends (similar to working example)
+  // Dispatch an event when the call ends
   if (typeof window !== 'undefined') {
     const event = new CustomEvent('callEnded');
     window.dispatchEvent(event);

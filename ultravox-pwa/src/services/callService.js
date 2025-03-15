@@ -127,11 +127,21 @@ export async function startCall(callbacks, callConfig, showDebugMessages) {
       
       if (callbacks?.onDebugMessage) {
         uvSession.addEventListener('experimental_message', (msg) => {
+          console.log('Ultravox experimental message:', msg);
           callbacks.onDebugMessage(msg);
         });
       }
       
+      // Add a manual status check after 5 seconds in case we don't get events
+      setTimeout(() => {
+        console.log('Manual status check after 5 seconds:', uvSession?.status);
+        if (uvSession?.status && callbacks?.onStatusChange) {
+          callbacks.onStatusChange(uvSession.status, uvSession.transcripts);
+        }
+      }, 5000);
+      
       // CRITICAL: NO AWAIT - EXACT MATCH TO WORKING EXAMPLE
+      console.log('About to join call with URL:', joinUrl);
       uvSession.joinCall(joinUrl);
       console.log('Session status after join call:', uvSession.status);
       

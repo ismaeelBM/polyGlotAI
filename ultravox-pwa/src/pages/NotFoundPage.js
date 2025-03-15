@@ -1,11 +1,11 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Globe } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import Layout from '../components/Layout';
 import CustomButton from '../components/ui/custom-button';
 
-const HomePage = () => {
+const NotFoundPage = () => {
   const navigate = useNavigate();
 
   return (
@@ -24,21 +24,14 @@ const HomePage = () => {
         >
           <motion.div 
             className="bg-white/10 p-6 rounded-full"
-            animate={{ 
-              y: [0, -10, 0],
-              boxShadow: [
-                "0 0 0 rgba(255, 255, 255, 0.4)",
-                "0 0 20px rgba(255, 255, 255, 0.2)",
-                "0 0 0 rgba(255, 255, 255, 0.4)"
-              ]
-            }}
+            animate={{ rotate: [0, 10, -10, 10, 0] }}
             transition={{ 
               duration: 2, 
               repeat: Infinity,
               repeatType: "loop" 
             }}
           >
-            <Globe size={64} className="text-white" />
+            <AlertTriangle size={64} className="text-yellow-400" />
           </motion.div>
         </motion.div>
         
@@ -48,7 +41,7 @@ const HomePage = () => {
           transition={{ delay: 0.3, duration: 0.5 }}
           className="text-3xl font-bold mb-4 text-center"
         >
-          Welcome to Polyglot
+          Page Not Found
         </motion.h1>
         
         <motion.p
@@ -57,28 +50,20 @@ const HomePage = () => {
           transition={{ delay: 0.4, duration: 0.5 }}
           className="text-white/70 text-center mb-8"
         >
-          Your AI language tutor for immersive conversations
+          The page you're looking for doesn't exist or has been moved.
         </motion.p>
         
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5, duration: 0.5 }}
-          className="w-full space-y-4"
+          className="w-full"
         >
           <CustomButton
             className="w-full"
-            onClick={() => navigate('/language-selection')}
+            onClick={() => navigate('/')}
           >
-            Get Started
-          </CustomButton>
-          
-          <CustomButton
-            variant="outline"
-            className="w-full"
-            onClick={() => navigate('/login')}
-          >
-            Login
+            Go Home
           </CustomButton>
         </motion.div>
       </motion.div>
@@ -86,4 +71,4 @@ const HomePage = () => {
   );
 };
 
-export default HomePage; 
+export default NotFoundPage; 

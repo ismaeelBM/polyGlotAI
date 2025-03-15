@@ -66,7 +66,7 @@ export async function createCall(callConfig) {
       temperature: callConfig.temperature || 0.4,
       model: callConfig.model || "fixie-ai/ultravox-70B",
       voice: callConfig.voice, 
-      languageHint: callConfig.languageHint,
+      // languageHint: callConfig.languageHint,
       selectedTools: callConfig.selectedTools || []
     };
     

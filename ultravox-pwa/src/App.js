@@ -1,35 +1,48 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { ProgressProvider } from './contexts/ProgressContext';
+import { AnimatePresence } from 'framer-motion';
 
 // Pages
 import HomePage from './pages/HomePage';
-import TutorSelectionPage from './pages/TutorSelectionPage';
-import ScenarioSelectionPage from './pages/ScenarioSelectionPage';
-import DifficultySelectionPage from './pages/DifficultySelectionPage';
-import ConversationPage from './pages/ConversationPage';
+import LanguageSelectionPage from './pages/LanguageSelectionPage';
+import TutorPage from './pages/TutorPage';
+import LoginPage from './pages/LoginPage';
+import SignupPage from './pages/SignupPage';
+import SettingsPage from './pages/SettingsPage';
+import NotFoundPage from './pages/NotFoundPage';
+
+const AnimatedRoutes = () => {
+  const location = useLocation();
+  
+  return (
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
+        <Route path="/language-selection" element={<LanguageSelectionPage />} />
+        <Route path="/tutor" element={<TutorPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
+    </AnimatePresence>
+  );
+};
 
 function App() {
   return (
-    <Router>
+    <BrowserRouter>
       <AuthProvider>
         <LanguageProvider>
           <ProgressProvider>
-            <div className="app bg-gray-100 min-h-screen">
-              <Routes>
-                <Route path="/" element={<HomePage />} />
-                <Route path="/tutors" element={<TutorSelectionPage />} />
-                <Route path="/tutors/:tutorId/scenarios" element={<ScenarioSelectionPage />} />
-                <Route path="/tutors/:tutorId/scenarios/:scenarioId/difficulty" element={<DifficultySelectionPage />} />
-                <Route path="/conversation" element={<ConversationPage />} />
-              </Routes>
-            </div>
+            <AnimatedRoutes />
           </ProgressProvider>
         </LanguageProvider>
       </AuthProvider>
-    </Router>
+    </BrowserRouter>
   );
 }
 

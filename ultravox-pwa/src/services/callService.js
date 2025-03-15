@@ -1,5 +1,5 @@
 import api from './api';
-import { UltravoxSession, Role, UltravoxSessionStatus } from 'ultravox-client';
+import { UltravoxSession, Role } from 'ultravox-client';
 
 // Global reference to the current Ultravox session
 let uvSession = null;
@@ -14,7 +14,7 @@ export function toggleMute(role) {
   if (uvSession) {
     try {
       // Toggle (user) Mic
-      if (role == Role.USER) {
+      if (role === Role.USER) {
         uvSession.isMicMuted ? uvSession.unmuteMic() : uvSession.muteMic();
       } 
       // Mute (agent) Speaker
@@ -37,22 +37,22 @@ export function generateSystemPrompt(tutor, scenario, difficulty) {
   const difficultyText = difficulty === 1 ? 'beginner' : 
                          difficulty === 2 ? 'intermediate' : 'advanced';
   
-  return `You are ${tutor.name}, a ${tutor.language} language tutor specializing in ${tutor.specialty}. 
-Your role is to help the student practice ${tutor.language} in a scenario: "${scenario.name}".
+  return `You are ${tutor.name}, a ${tutor.language} language learning assistant specializing in ${tutor.specialty}. 
+Your role is to help the student practice ${tutor.language}".
 
 Difficulty level: ${difficultyText}. ${difficulty === 1 ? 'Use simple vocabulary and speak slowly.' : 
                        difficulty === 2 ? 'Use moderate vocabulary and natural speed.' : 
                        'Use advanced vocabulary, idioms, and normal conversational speed.'}
 
 Your goal is to:
-1. Guide the student through a realistic conversation in this scenario
-2. Correct major errors but don't interrupt the flow too much
-3. Introduce useful vocabulary and phrases naturally
-4. Adapt to the student's level and support them when they struggle
-5. Keep responses concise and conversational (1-3 sentences is ideal)
+1. Have a conversation with the student in ${tutor.language}
+2. Ask what the student wants to learn today
+3. Teach the student what they want to learn breaking it down into small chunks
+4. Ask the student to practice what they've learned
+5. Correct the student's grammar and pronunciation
 6. End the conversation naturally after about 5 minutes
 
-Start by greeting the student in ${tutor.language} and then in English, and set up the scenario. Then continue primarily in ${tutor.language}, but you can occasionally use English to explain complex concepts if needed.`;
+Start by greeting the student in ${tutor.language} and then in English.`;
 }
 
 /**
@@ -118,7 +118,7 @@ export async function startCall(callbacks, callConfig, showDebugMessages) {
     if (uvSession) {
       // Set up event listeners - EXACT MATCH TO WORKING EXAMPLE
       uvSession.addEventListener('status', (event) => {
-        callbacks.onStatusChange(uvSession?.status);
+        callbacks.onStatusChange(uvSession?.status, uvSession?.transcripts);
       });
       
       uvSession.addEventListener('transcripts', (event) => {

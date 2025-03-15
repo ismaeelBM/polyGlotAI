@@ -46,22 +46,38 @@ const ConversationPage = () => {
   }, [selectedTutor, selectedScenario, navigate]);
   
   // Handle status change callback
-  const handleStatusChange = useCallback((status) => {
-    console.log('Call status changed:', status);
-    setCallStatus(status || 'unknown');
-    
-    if (status === 'connected') {
-      setIsCallActive(true);
-      setIsLoading(false);
-      startTime.current = new Date();
-    } else if (status === 'disconnected' || status === 'ended' || status === 'error') {
-      setIsCallActive(false);
+  const handleStatusChange = useCallback((status, transcripts) => {
+    // console.log('Call status changed:', status);
+    if (callStatus !== status) {
+      console.log('Call status changed from', callStatus, 'to', status);
+      setCallStatus(status || 'unknown');
+      if (status === 'connected') {
+        setIsCallActive(true);
+        setIsLoading(false);
+        startTime.current = new Date();
+      } else if (status === 'speaking' || status === 'listening') {
+        getCurrentSentence(transcripts);
+      } else if (status === 'disconnected' || status === 'disconnecting' || status === 'ended' || status === 'error') {
+        setIsCallActive(false);
+        processTranscripts(transcripts);
+      }
     }
+  }, []);
+
+  const getCurrentSentence = useCallback((transcripts) => {
+    // TODO: Implement this
+    console.log('WIP: getCurrentSentence');
+  }, []);
+
+  const processTranscripts = useCallback((transcripts) => {
+    console.log('Processing transcripts:', transcripts);
+    // print the transcripts as strings
+    console.log('Transcripts:', transcripts.map(t => t.text).join('\n'));
   }, []);
   
   // Handle transcript change callback
   const handleTranscriptChange = useCallback((newTranscripts) => {
-    console.log('Transcripts updated:', newTranscripts);
+    // console.log('Transcripts updated:', newTranscripts);
     if (Array.isArray(newTranscripts)) {
       setTranscripts(newTranscripts);
     }

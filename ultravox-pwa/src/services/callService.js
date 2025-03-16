@@ -134,45 +134,43 @@ export async function startCall(callbacks, callConfig, showDebugMessages) {
     if (uvSession) {
       // Set up event listeners
       uvSession.addEventListener('status', (event) => {
-        console.log('CallService: Raw status event:', event);
-        
         if (callbacks?.onStatusChange) {
-          const status = event.detail || event.status || uvSession?.status;
-          callbacks.onStatusChange(status);
-          console.log('CallService: Status changed:', {
-            status,
-            sessionStatus: uvSession?.status,
-            timestamp: new Date().toISOString()
-          });
-          
-          // Log transcripts whenever status changes
-          if (uvSession?.transcripts) {
-            console.log('CallService: Current transcripts on status change:', {
-              count: uvSession.transcripts.length,
-              timestamp: new Date().toISOString()
-            });
+          callbacks.onStatusChange(uvSession?.status);
+          // If status changes to speaking or listening, also send transcripts
+          if (uvSession?.status === 'speaking' || uvSession?.status === 'listening') {
+            if (uvSession?.transcripts) {
+              console.log('Status change triggered transcript update:', uvSession.transcripts);
+              callbacks.onTranscriptChange?.(uvSession.transcripts);
+            }
           }
         }
       });
       
       uvSession.addEventListener('transcripts', (event) => {
-        console.log('CallService: Raw transcript event:', event);
+        console.log('callService: Raw transcript event received:', event);
         
-        const transcripts = event.detail || event.transcripts || uvSession?.transcripts;
-        
-        console.log('CallService: Transcript event received:', {
-          hasTranscripts: !!transcripts,
-          count: transcripts?.length,
-          timestamp: new Date().toISOString()
-        });
-
-        if (callbacks?.onTranscriptChange && transcripts) {
-          console.log('CallService: Sending transcripts to callback:', {
-            count: transcripts.length,
-            latest: transcripts[transcripts.length - 1]?.text,
-            timestamp: new Date().toISOString()
-          });
-          callbacks.onTranscriptChange(transcripts);
+        if (callbacks?.onTranscriptChange) {
+          // Get the transcripts from the event or session
+          let transcripts;
+          
+          if (event?.transcripts) {
+            console.log('callService: Using transcripts from event');
+            transcripts = event.transcripts;
+          } else if (uvSession?.transcripts) {
+            console.log('callService: Using transcripts from session');
+            transcripts = uvSession.transcripts;
+          }
+          
+          // Ensure we have an array of transcripts
+          if (transcripts) {
+            const transcriptArray = Array.isArray(transcripts) ? transcripts : [transcripts];
+            console.log('callService: Processed transcript array:', transcriptArray);
+            
+            if (transcriptArray.length > 0) {
+              console.log('callService: Sending transcripts to TutorPage:', transcriptArray);
+              callbacks.onTranscriptChange(transcriptArray);
+            }
+          }
         }
       });
       
@@ -183,12 +181,23 @@ export async function startCall(callbacks, callConfig, showDebugMessages) {
         });
       }
       
-      // Add a manual status check after 5 seconds in case we don't get events
+      // Add a manual status and transcript check after 5 seconds
       setTimeout(() => {
         if (uvSession) {
-          console.log('Manual status check after 5 seconds:', uvSession?.status);
+          console.log('callService: Manual status check after 5 seconds:', uvSession?.status);
+          if (uvSession?.transcripts) {
+            console.log('callService: Manual transcript check after 5 seconds:', uvSession.transcripts);
+            if (callbacks?.onTranscriptChange) {
+              const transcripts = Array.isArray(uvSession.transcripts) ? uvSession.transcripts : [uvSession.transcripts];
+              if (transcripts.length > 0) {
+                console.log('callService: Sending manual transcript check to TutorPage:', transcripts);
+                callbacks.onTranscriptChange(transcripts);
+              }
+            }
+          }
           if (uvSession?.status && callbacks?.onStatusChange) {
-            callbacks.onStatusChange(uvSession.status, uvSession.transcripts);
+            console.log('callService: Sending manual status update:', uvSession.status);
+            callbacks.onStatusChange(uvSession.status);
           }
         }
       }, 5000);

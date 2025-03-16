@@ -134,22 +134,45 @@ export async function startCall(callbacks, callConfig, showDebugMessages) {
     if (uvSession) {
       // Set up event listeners
       uvSession.addEventListener('status', (event) => {
+        console.log('CallService: Raw status event:', event);
+        
         if (callbacks?.onStatusChange) {
-          callbacks.onStatusChange(uvSession?.status);
-          console.log('Status changed:', uvSession?.status);
+          const status = event.detail || event.status || uvSession?.status;
+          callbacks.onStatusChange(status);
+          console.log('CallService: Status changed:', {
+            status,
+            sessionStatus: uvSession?.status,
+            timestamp: new Date().toISOString()
+          });
           
           // Log transcripts whenever status changes
           if (uvSession?.transcripts) {
-            console.log('Current transcripts:', uvSession.transcripts);
+            console.log('CallService: Current transcripts on status change:', {
+              count: uvSession.transcripts.length,
+              timestamp: new Date().toISOString()
+            });
           }
         }
       });
       
       uvSession.addEventListener('transcripts', (event) => {
-        console.log('Transcript event received:', event);
-        if (callbacks?.onTranscriptChange && uvSession?.transcripts) {
-          console.log('Sending transcripts to callback:', uvSession.transcripts);
-          callbacks.onTranscriptChange(uvSession.transcripts);
+        console.log('CallService: Raw transcript event:', event);
+        
+        const transcripts = event.detail || event.transcripts || uvSession?.transcripts;
+        
+        console.log('CallService: Transcript event received:', {
+          hasTranscripts: !!transcripts,
+          count: transcripts?.length,
+          timestamp: new Date().toISOString()
+        });
+
+        if (callbacks?.onTranscriptChange && transcripts) {
+          console.log('CallService: Sending transcripts to callback:', {
+            count: transcripts.length,
+            latest: transcripts[transcripts.length - 1]?.text,
+            timestamp: new Date().toISOString()
+          });
+          callbacks.onTranscriptChange(transcripts);
         }
       });
       

@@ -11,6 +11,8 @@ import { startCall, endCall, generateSystemPrompt, Role } from '../services/call
 import RingingAnimation from '../components/RingingAnimation';
 import AudioWave from '../components/AudioWave';
 import TranslationDisplay from '../components/TranslationDisplay';
+import WordFocus from '../components/WordFocus';
+import transcriptManager from '../services/TranscriptManager';
 
 const TutorPage = () => {
   const navigate = useNavigate();
@@ -27,8 +29,8 @@ const TutorPage = () => {
   
   // For translation display
   const [translationData, setTranslationData] = useState({
-    original: "Hello, how are you doing today?",
-    translated: "Bonjour, comment allez-vous aujourd'hui?"
+    original: "",
+    translated: ""
   });
   
   const callSession = useRef(null);
@@ -40,15 +42,25 @@ const TutorPage = () => {
   
   // Add state for storing all transcripts
   const [transcriptHistory, setTranscriptHistory] = useState([]);
-  
-  // Handle cleanup when component unmounts
+
+  // Initialize transcript manager with language when tutor changes
   useEffect(() => {
-    // If no tutor is selected, prepare tutor options
-    if (!selectedTutor) {
-      setTutorOptions(tutors);
+    if (selectedTutor?.language) {
+      console.log('TutorPage: Setting language in transcript manager:', selectedTutor.language);
+      transcriptManager.setLanguage(selectedTutor.language);
     }
-    
-    // Cleanup function
+  }, [selectedTutor?.language]);
+
+  // Cleanup transcript manager on unmount
+  useEffect(() => {
+    return () => {
+      console.log('TutorPage: Cleaning up transcript manager');
+      transcriptManager.clear();
+    };
+  }, []);
+
+  // Remove the simulated tutor speaking and sentences effects
+  useEffect(() => {
     return () => {
       mountedRef.current = false;
       if (isInCall) {
@@ -56,140 +68,87 @@ const TutorPage = () => {
       }
     };
   }, [selectedTutor, tutors]); // eslint-disable-line react-hooks/exhaustive-deps
-  // The above dependency array is intentionally missing handleEndCall and isInCall
-  // Adding handleEndCall would cause an infinite loop since it updates state
-  // isInCall is only used in the cleanup function which runs once on unmount
-
-  // Simulate tutor speaking when in call
-  useEffect(() => {
-    if (isInCall) {
-      const speakInterval = setInterval(() => {
-        setIsActiveSpeech(prev => !prev);
-      }, 4000);
-      
-      return () => clearInterval(speakInterval);
-    }
-  }, [isInCall]);
-  
-  // Simulate changing sentences
-  useEffect(() => {
-    if (isInCall) {
-      const sentences = [
-        {
-          original: "Hello, how are you doing today?",
-          translated: "Bonjour, comment allez-vous aujourd'hui?"
-        },
-        {
-          original: "Let's practice some common phrases.",
-          translated: "Pratiquons quelques phrases courantes."
-        },
-        {
-          original: "What would you like to learn?",
-          translated: "Qu'aimeriez-vous apprendre?"
-        },
-        {
-          original: "That's great progress!",
-          translated: "C'est un excellent progrès!"
-        }
-      ];
-      
-      let index = 0;
-      const sentenceInterval = setInterval(() => {
-        index = (index + 1) % sentences.length;
-        setTranslationData(sentences[index]);
-      }, 8000);
-      
-      return () => clearInterval(sentenceInterval);
-    }
-  }, [isInCall]);
 
   const handleSelectTutor = (tutor) => {
     setSelectedTutor(tutor);
+  };
+
+  // Simplify the transcript handling in onTranscriptChange
+  const handleTranscriptChange = (newTranscripts) => {
+    if (!mountedRef.current) return;
+    
+    console.log('TutorPage: Received transcripts from call service', {
+      count: newTranscripts?.length,
+      latest: newTranscripts?.[newTranscripts.length - 1]?.text,
+      timestamp: new Date().toISOString()
+    });
+
+    // Always set isInCall true when we get transcripts
+    setIsInCall(true);
+    
+    // Send transcripts to manager
+    transcriptManager.addTranscripts(newTranscripts);
+    
+    // Update translation display with the latest transcript
+    if (newTranscripts?.length > 0) {
+      const latestTranscript = newTranscripts[newTranscripts.length - 1];
+      
+      // Set active speech for agent transcripts
+      if (latestTranscript.role === Role.AGENT) {
+        setIsActiveSpeech(true);
+        setTimeout(() => {
+          if (mountedRef.current) {
+            setIsActiveSpeech(false);
+          }
+        }, latestTranscript.text.length * 100);
+      }
+      
+      // Update translation display
+      setTranslationData({
+        original: latestTranscript.text,
+        translated: latestTranscript.role === Role.AGENT ? 
+          `Tutor: ${latestTranscript.text}` : 
+          `You: ${latestTranscript.text}`
+      });
+    }
+  };
+
+  // Simplify status change handler
+  const handleStatusChange = (status) => {
+    console.log('TutorPage: Call status changed:', status);
+    
+    if (status === 'connecting') {
+      setIsConnecting(true);
+    } else if (status === 'disconnected') {
+      setIsConnecting(false);
+      setIsInCall(false);
+      transcriptManager.clear(); // Clear transcripts in manager
+    } else {
+      setIsConnecting(false);
+      setIsInCall(true);
+    }
   };
 
   const handleStartCall = async () => {
     if (!selectedTutor) return;
     
     setShowRinging(true);
+    transcriptManager.clear(); // Clear previous transcripts
+    setError(null);
     
     try {
-      // Prepare for call
       const systemPrompt = generateSystemPrompt(selectedTutor, null, 1);
-      
-      // Set up callbacks for the call
       const callbacks = {
-        onStatusChange: (status) => {
-          // Valid Statuses: [idle, listening, speaking, thinking, disconnected, disconnecting, connecting]
-          
-          if (status === 'connecting') {
-            setIsConnecting(true);
-            setIsInCall(false);
-            console.log('Connecting...');
-          } else if (status === 'idle' || status === 'listening' || status === 'speaking' || status === 'thinking') {
-            setIsConnecting(false);
-            setIsInCall(true);
-            startTime.current = new Date();
-            console.log('status changed to:', status);
-          } else if (status === 'disconnected') {
-            setIsInCall(false);
-            setIsConnecting(false);
-          }
-        },
-        onTranscriptChange: (newTranscripts) => {
-          if (!mountedRef.current) return;
-          
-          // Log full transcript array
-          console.log('Full transcripts:', newTranscripts);
-          
-          // Store all transcripts in state
-          setTranscriptHistory(newTranscripts);
-          
-          // Update translation data with the latest transcript
-          if (newTranscripts && newTranscripts.length > 0) {
-            const latestTranscript = newTranscripts[newTranscripts.length - 1];
-            
-            // Log the latest transcript details
-            console.log('Latest transcript:', {
-              text: latestTranscript.text,
-              role: latestTranscript.role,
-              isFinal: latestTranscript.isFinal,
-              medium: latestTranscript.medium
-            });
-            
-            // Handle both user and agent transcripts
-            if (latestTranscript.role === Role.AGENT) {
-              setIsActiveSpeech(true);
-              
-              // Update translation for agent speech
-              setTranslationData({
-                original: latestTranscript.text,
-                translated: `Translation of: ${latestTranscript.text}`
-              });
-              
-              // Simulate speech ending after a delay
-              setTimeout(() => {
-                if (mountedRef.current) {
-                  setIsActiveSpeech(false);
-                }
-              }, latestTranscript.text.length * 100);
-            } else if (latestTranscript.role === Role.USER) {
-              // Update translation for user speech
-              setTranslationData({
-                original: latestTranscript.text,
-                translated: `Translation of user: ${latestTranscript.text}`
-              });
-            }
-          }
-        }
+        onStatusChange: handleStatusChange,
+        onTranscriptChange: handleTranscriptChange
       };
       
-      // Simulate connecting to call after ringing animation
       setTimeout(() => {
         handleConnectCall(systemPrompt, callbacks);
       }, 3000);
       
     } catch (error) {
-      console.error('Error starting call:', error);
+      console.error('TutorPage: Error starting call:', error);
       setError('Failed to connect. Please try again.');
       setIsConnecting(false);
       setShowRinging(false);
@@ -233,21 +192,17 @@ const TutorPage = () => {
   };
 
   const handleEndCall = async () => {
-    setIsConnecting(true);
-    
     try {
       await endCall();
       
-      // Record the conversation if needed
       if (startTime.current && recordConversation) {
         const duration = Math.round((new Date() - startTime.current) / 1000);
         recordConversation(selectedTutor.id, duration);
       }
       
-      setTimeout(() => {
-        setIsInCall(false);
-        setIsConnecting(false);
-      }, 1000);
+      setIsInCall(false);
+      setIsConnecting(false);
+      setTranscriptHistory([]); // Clear transcripts on end
       
     } catch (error) {
       console.error('Error ending call:', error);
@@ -463,6 +418,9 @@ const TutorPage = () => {
             <p className="text-sm text-white">{error}</p>
           </motion.div>
         )}
+        
+        {/* Add WordFocus component */}
+        <WordFocus language={selectedTutor?.language || 'en'} />
       </div>
     </Layout>
   );

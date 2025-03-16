@@ -8,6 +8,7 @@
     "@testing-library/user-event": "^13.5.0",
     "autoprefixer": "^10.4.13",
     "axios": "^1.8.2",
+    "chalk": "^4.1.2",
     "clsx": "^2.1.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
@@ -42,7 +43,9 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "server": "node server.js"
+    "server": "node server.js",
+    "ngrok-server": "node ngrok-server.js",
+    "ngrok-start": "node start-ngrok-server.js"
   },
   "eslintConfig": {
     "extends": [
@@ -63,6 +66,7 @@
     ]
   },
   "devDependencies": {
+    "ngrok": "^5.0.0-beta.2",
     "tailwindcss-animate": "^1.0.7"
   }
 }

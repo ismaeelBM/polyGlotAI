@@ -14,14 +14,13 @@ const callData = {
   systemPrompt: "You are a helpful AI assistant. Keep your responses brief and conversational.",
   temperature: 0.7,
   model: "fixie-ai/ultravox", // Official model from docs
-  languageHint: "en",
   initialMessages: [
     {
       role: "MESSAGE_ROLE_AGENT", // Correct enum value from docs
       text: "Hello, I'm your Ultravox AI assistant. How can I help you today?"
     }
   ],
-  joinTimeout: "60s", // String format with units
+  joinTimeout: "15s", // String format with units
   maxDuration: "300s", // String format with units
   timeExceededMessage: "Our conversation has reached its time limit. Thank you for chatting with me.",
   recordingEnabled: true,

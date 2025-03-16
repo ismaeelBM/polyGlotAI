@@ -38,6 +38,9 @@ const TutorPage = () => {
   // If no tutor is selected, show a list of tutors for selection
   const [tutorOptions, setTutorOptions] = useState([]);
   
+  // Add state for storing all transcripts
+  const [transcriptHistory, setTranscriptHistory] = useState([]);
+  
   // Handle cleanup when component unmounts
   useEffect(() => {
     // If no tutor is selected, prepare tutor options
@@ -135,14 +138,29 @@ const TutorPage = () => {
         onTranscriptChange: (newTranscripts) => {
           if (!mountedRef.current) return;
           
+          // Log full transcript array
+          console.log('Full transcripts:', newTranscripts);
+          
+          // Store all transcripts in state
+          setTranscriptHistory(newTranscripts);
+          
           // Update translation data with the latest transcript
           if (newTranscripts && newTranscripts.length > 0) {
             const latestTranscript = newTranscripts[newTranscripts.length - 1];
             
+            // Log the latest transcript details
+            console.log('Latest transcript:', {
+              text: latestTranscript.text,
+              role: latestTranscript.role,
+              isFinal: latestTranscript.isFinal,
+              medium: latestTranscript.medium
+            });
+            
+            // Handle both user and agent transcripts
             if (latestTranscript.role === Role.AGENT) {
               setIsActiveSpeech(true);
               
-              // Simulate translation (in a real app, this would come from a translation service)
+              // Update translation for agent speech
               setTranslationData({
                 original: latestTranscript.text,
                 translated: `Translation of: ${latestTranscript.text}`
@@ -154,6 +172,12 @@ const TutorPage = () => {
                   setIsActiveSpeech(false);
                 }
               }, latestTranscript.text.length * 100);
+            } else if (latestTranscript.role === Role.USER) {
+              // Update translation for user speech
+              setTranslationData({
+                original: latestTranscript.text,
+                translated: `Translation of user: ${latestTranscript.text}`
+              });
             }
           }
         }
@@ -180,8 +204,7 @@ const TutorPage = () => {
       // Start the call
       const callConfig = {
         systemPrompt,
-        voice: selectedTutor.voice,
-        languageHint: selectedTutor.language
+        voice: selectedTutor.voice
       };
       
       callSession.current = await startCall(callbacks, callConfig, false);

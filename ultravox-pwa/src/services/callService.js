@@ -56,10 +56,34 @@ export async function createCall(callConfig) {
     // Extract only the parameters that the Ultravox API endpoint accepts
     const validAPIParams = {
       systemPrompt: callConfig.systemPrompt,
-      temperature: callConfig.temperature || 0.4,
-      model: callConfig.model || "fixie-ai/ultravox-70B",
-      voice: callConfig.voice, 
-      selectedTools: callConfig.selectedTools || []
+      model: "fixie-ai/ultravox-70B",
+      temperature: 0.7,
+      voice: callConfig.voice || "en-US-Standard-C",
+      initialOutputMedium: "MESSAGE_MEDIUM_VOICE",
+      firstSpeaker: "FIRST_SPEAKER_AGENT",
+      joinTimeout: "60s",
+      maxDuration: "300s",
+      timeExceededMessage: "Our conversation has reached its time limit. Thank you for chatting with me.",
+      recordingEnabled: false,
+      transcriptOptional: false,
+      firstSpeakerSettings: {
+        agent: {
+          uninterruptible: true,
+          text: "Hello! I'm your language tutor. How can I help you today?"
+        }
+      },
+      inactivityMessages: [
+        {
+          duration: "10s",
+          message: "Are you still there?",
+          endBehavior: "END_BEHAVIOR_UNSPECIFIED"
+        }
+      ],
+      vadSettings: {
+        turnEndpointDelay: "1s",
+        minimumTurnDuration: "1s",
+        minimumInterruptionDuration: "1s"
+      }
     };
     
     console.log('Creating call with parameters:', validAPIParams);
@@ -111,13 +135,21 @@ export async function startCall(callbacks, callConfig, showDebugMessages) {
       // Set up event listeners
       uvSession.addEventListener('status', (event) => {
         if (callbacks?.onStatusChange) {
-          callbacks.onStatusChange(uvSession?.status, uvSession?.transcripts);
+          callbacks.onStatusChange(uvSession?.status);
+          console.log('Status changed:', uvSession?.status);
+          
+          // Log transcripts whenever status changes
+          if (uvSession?.transcripts) {
+            console.log('Current transcripts:', uvSession.transcripts);
+          }
         }
       });
       
       uvSession.addEventListener('transcripts', (event) => {
-        if (callbacks?.onTranscriptChange) {
-          callbacks.onTranscriptChange(uvSession?.transcripts);
+        console.log('Transcript event received:', event);
+        if (callbacks?.onTranscriptChange && uvSession?.transcripts) {
+          console.log('Sending transcripts to callback:', uvSession.transcripts);
+          callbacks.onTranscriptChange(uvSession.transcripts);
         }
       });
       

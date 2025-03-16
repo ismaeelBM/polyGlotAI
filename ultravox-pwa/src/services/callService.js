@@ -66,24 +66,24 @@ export async function createCall(callConfig) {
       timeExceededMessage: "Our conversation has reached its time limit. Thank you for chatting with me.",
       recordingEnabled: false,
       transcriptOptional: false,
-      firstSpeakerSettings: {
-        agent: {
-          uninterruptible: true,
-          text: "Hello! I'm your language tutor. How can I help you today?"
-        }
-      },
-      inactivityMessages: [
-        {
-          duration: "10s",
-          message: "Are you still there?",
-          endBehavior: "END_BEHAVIOR_UNSPECIFIED"
-        }
-      ],
-      vadSettings: {
-        turnEndpointDelay: "1s",
-        minimumTurnDuration: "1s",
-        minimumInterruptionDuration: "1s"
-      }
+      // firstSpeakerSettings: {
+      //   agent: {
+      //     uninterruptible: false,
+      //     text: "Hello! I'm your language tutor. How can I help you today?"
+      //   }
+      // },
+      // inactivityMessages: [
+      //   {
+      //     duration: "10s",
+      //     message: "Are you still there?",
+      //     endBehavior: "END_BEHAVIOR_UNSPECIFIED"
+      //   }
+      // ],
+      // vadSettings: {
+      //   turnEndpointDelay: "1s",
+      //   minimumTurnDuration: "1s",
+      //   minimumInterruptionDuration: "1s"
+      // }
     };
     
     console.log('Creating call with parameters:', validAPIParams);
@@ -135,7 +135,7 @@ export async function startCall(callbacks, callConfig, showDebugMessages) {
       // Set up event listeners
       uvSession.addEventListener('status', (event) => {
         if (callbacks?.onStatusChange) {
-          callbacks.onStatusChange(uvSession?.status);
+          callbacks.onStatusChange(uvSession?.status, uvSession?.transcripts);
           console.log('Status changed:', uvSession?.status);
           
           // Log transcripts whenever status changes
@@ -146,9 +146,9 @@ export async function startCall(callbacks, callConfig, showDebugMessages) {
       });
       
       uvSession.addEventListener('transcripts', (event) => {
-        console.log('Transcript event received:', event);
+        // console.log('Transcript event received:', event);
         if (callbacks?.onTranscriptChange && uvSession?.transcripts) {
-          console.log('Sending transcripts to callback:', uvSession.transcripts);
+          // console.log('Sending transcripts to callback:', uvSession.transcripts);
           callbacks.onTranscriptChange(uvSession.transcripts);
         }
       });

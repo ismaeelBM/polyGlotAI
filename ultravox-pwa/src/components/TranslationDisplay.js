@@ -3,7 +3,8 @@ import { motion } from 'framer-motion';
 
 const TranslationDisplay = ({ 
   original = "This is a sample sentence in English.",
-  translated = "C'est une phrase d'exemple en français."
+  translated = "C'est une phrase d'exemple en français.",
+  pronunciation = "Say phra-zuh duh-zahm-pluh ahn frahn-say"
 }) => {
   return (
     <motion.div
@@ -17,9 +18,14 @@ const TranslationDisplay = ({
         <p className="text-white text-sm">{original}</p>
       </div>
       
-      <div className="pt-3 border-t border-white/10">
+      <div className="pt-3 border-t border-white/10 mb-4">
         <p className="text-xs text-white/60 mb-1">Translation</p>
         <p className="text-green-400 text-sm">{translated}</p>
+      </div>
+
+      <div className="pt-3 border-t border-white/10">
+        <p className="text-xs text-white/60 mb-1">Pronunciation</p>
+        <p className="text-blue-400 text-sm font-italic">{pronunciation}</p>
       </div>
     </motion.div>
   );

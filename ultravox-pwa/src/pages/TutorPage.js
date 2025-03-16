@@ -8,6 +8,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useProgress } from '../contexts/ProgressContext';
 import { startCall, endCall, generateSystemPrompt, Role } from '../services/callService';
+import { getHighlights, getSummary } from '../services/t2tService';
 import RingingAnimation from '../components/RingingAnimation';
 import AudioWave from '../components/AudioWave';
 import TranslationDisplay from '../components/TranslationDisplay';
@@ -18,6 +19,7 @@ const TutorPage = () => {
   const { deductCredits } = useAuth();
   const { recordConversation } = useProgress();
   
+  const [currentStatus, setCurrentStatus] = useState('idle');
   const [showMenu, setShowMenu] = useState(false);
   const [isInCall, setIsInCall] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -28,7 +30,8 @@ const TutorPage = () => {
   // For translation display
   const [translationData, setTranslationData] = useState({
     original: "Hello, how are you doing today?",
-    translated: "Bonjour, comment allez-vous aujourd'hui?"
+    translated: "Bonjour, comment allez-vous aujourd'hui?",
+    pronunciation: "bohn-ZHOOR, ko-mahn tah-lay VOO oh-zhoor-DWEE"
   });
   
   const callSession = useRef(null);
@@ -70,38 +73,6 @@ const TutorPage = () => {
       return () => clearInterval(speakInterval);
     }
   }, [isInCall]);
-  
-  // Simulate changing sentences
-  useEffect(() => {
-    if (isInCall) {
-      const sentences = [
-        {
-          original: "Hello, how are you doing today?",
-          translated: "Bonjour, comment allez-vous aujourd'hui?"
-        },
-        {
-          original: "Let's practice some common phrases.",
-          translated: "Pratiquons quelques phrases courantes."
-        },
-        {
-          original: "What would you like to learn?",
-          translated: "Qu'aimeriez-vous apprendre?"
-        },
-        {
-          original: "That's great progress!",
-          translated: "C'est un excellent progrès!"
-        }
-      ];
-      
-      let index = 0;
-      const sentenceInterval = setInterval(() => {
-        index = (index + 1) % sentences.length;
-        setTranslationData(sentences[index]);
-      }, 8000);
-      
-      return () => clearInterval(sentenceInterval);
-    }
-  }, [isInCall]);
 
   const handleSelectTutor = (tutor) => {
     setSelectedTutor(tutor);
@@ -118,9 +89,29 @@ const TutorPage = () => {
       
       // Set up callbacks for the call
       const callbacks = {
-        onStatusChange: (status) => {
+        onStatusChange: async (status, transcripts) => {
           // Valid Statuses: [idle, listening, speaking, thinking, disconnected, disconnecting, connecting]
-          
+          if (currentStatus !== status) {
+            console.log('status changed to:', status);
+            if (status === 'speaking' || status === 'listening') {
+              if (transcripts.length > 1) {
+                try {
+                  const newTranslations = await getHighlights(transcripts);
+                  console.log('newTranslations:', newTranslations);
+                  setTranslationData({
+                    original: newTranslations.words.original,
+                    translated: newTranslations.words.translation,
+                    pronunciation: newTranslations.words.pronounciation
+                  });
+                } catch (error) {
+                  console.error('Error getting highlights:', error);
+                }
+              }
+            } else if (status === 'disconnecting') {
+              const summary = await getSummary(transcripts);
+              console.log('summary:', summary);
+            }
+          }
           if (status === 'connecting') {
             setIsConnecting(true);
             setIsInCall(false);
@@ -134,12 +125,13 @@ const TutorPage = () => {
             setIsInCall(false);
             setIsConnecting(false);
           }
+          setCurrentStatus(status);
         },
         onTranscriptChange: (newTranscripts) => {
           if (!mountedRef.current) return;
           
           // Log full transcript array
-          console.log('Full transcripts:', newTranscripts);
+          // console.log('Full transcripts:', newTranscripts);
           
           // Store all transcripts in state
           setTranscriptHistory(newTranscripts);
@@ -163,7 +155,8 @@ const TutorPage = () => {
               // Update translation for agent speech
               setTranslationData({
                 original: latestTranscript.text,
-                translated: `Translation of: ${latestTranscript.text}`
+                translated: `Translation of: ${latestTranscript.text}`,
+                pronunciation: "Pronunciation not available"
               });
               
               // Simulate speech ending after a delay
@@ -176,7 +169,8 @@ const TutorPage = () => {
               // Update translation for user speech
               setTranslationData({
                 original: latestTranscript.text,
-                translated: `Translation of user: ${latestTranscript.text}`
+                translated: `Translation of user: ${latestTranscript.text}`,
+                pronunciation: "Pronunciation not available"
               });
             }
           }
@@ -210,9 +204,9 @@ const TutorPage = () => {
       callSession.current = await startCall(callbacks, callConfig, false);
       
       // Deduct credits if applicable
-      if (deductCredits) {
-        deductCredits(1);
-      }
+      // if (deductCredits) {
+      //   deductCredits(1);
+      // }
 
       // Add a fallback in case the onStatusChange callback isn't triggered
       // This ensures the UI transitions even if there's an issue with the call service
@@ -419,7 +413,8 @@ const TutorPage = () => {
             
             {isInCall && <TranslationDisplay 
               original={translationData.original} 
-              translated={translationData.translated} 
+              translated={translationData.translated}
+              pronunciation={translationData.pronunciation}
             />}
             
             <motion.div

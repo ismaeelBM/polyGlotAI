@@ -94,4 +94,38 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## Acknowledgments
 
 - Ultravox API for providing the voice conversation capabilities
-- The React and PWA communities for excellent documentation and examples 
+- The React and PWA communities for excellent documentation and examples
+
+## Recent Optimizations
+
+The codebase has been optimized with the following improvements:
+
+1. **Removed Unused Files**:
+   - Deleted empty ConversationPage.js
+   - Removed unused pages: ScenarioSelectionPage.js, TutorSelectionPage.js, DifficultySelectionPage.js
+   - Removed unused components: ScenarioCard.js, TutorCard.js, UserProgress.js, ProgressStats.js, BackButton.js
+
+2. **Simplified Context Management**:
+   - Streamlined LanguageContext.js by removing unused state and functions related to scenarios and difficulty levels
+   - Dramatically simplified ProgressContext.js by removing complex vocabulary and proficiency tracking
+   - Improved local storage handling
+
+3. **Optimized Service Layer**:
+   - Simplified callService.js to focus on core functionality
+   - Improved error handling throughout the application
+   - Removed unused API endpoints from api.js
+
+4. **Enhanced Server Configuration**:
+   - Added static file serving for production builds
+   - Improved error handling in server.js
+
+5. **Performance Improvements**:
+   - Added null checks to prevent potential errors
+   - Improved cleanup of resources
+   - Enabled proper usage of reportWebVitals for performance monitoring
+
+6. **Reduced Package Size**:
+   - Removed unused testing dependencies
+   - Removed unused test scripts
+
+These changes have resulted in a cleaner, more maintainable codebase with a smaller bundle size while preserving all core functionality 

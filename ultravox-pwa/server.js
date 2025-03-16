@@ -22,7 +22,7 @@ app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'ok', message: 'Ultravox PWA Backend API is running' });
 });
 
-// Proxy endpoint for Ultravox API calls - matches the working example
+// Proxy endpoint for Ultravox API calls
 app.post('/api/ultravox/calls', async (req, res) => {
   try {
     console.log('Received call creation request:', req.body);
@@ -36,7 +36,7 @@ app.post('/api/ultravox/calls', async (req, res) => {
       });
     }
     
-    // Create the Ultravox API request - exact match to working example
+    // Create the Ultravox API request
     const response = await axios({
       method: 'POST',
       url: `${process.env.ULTRAVOX_API_URL}/api/calls`,
@@ -64,6 +64,18 @@ app.post('/api/ultravox/calls', async (req, res) => {
     }
   }
 });
+
+// Serve static assets in production
+if (process.env.NODE_ENV === 'production') {
+  // Serve static files from the React app
+  app.use(express.static(path.join(__dirname, 'build')));
+
+  // The "catchall" handler: for any request that doesn't
+  // match one above, send back React's index.html file.
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'build', 'index.html'));
+  });
+}
 
 // Start the server
 app.listen(PORT, () => {

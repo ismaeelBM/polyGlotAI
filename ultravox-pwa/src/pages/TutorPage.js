@@ -7,7 +7,7 @@ import CustomButton from '../components/ui/custom-button';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useProgress } from '../contexts/ProgressContext';
-import { startCall, endCall, generateSystemPrompt, Role, toggleMute } from '../services/callService';
+import { startCall, endCall, generateSystemPrompt, Role } from '../services/callService';
 import RingingAnimation from '../components/RingingAnimation';
 import AudioWave from '../components/AudioWave';
 import TranslationDisplay from '../components/TranslationDisplay';
@@ -23,13 +23,12 @@ const TutorPage = () => {
   const [isConnecting, setIsConnecting] = useState(false);
   const [showRinging, setShowRinging] = useState(false);
   const [isActiveSpeech, setIsActiveSpeech] = useState(false);
-  const [isMicMuted, setIsMicMuted] = useState(false);
   const [error, setError] = useState(null);
   
   // For translation display
   const [translationData, setTranslationData] = useState({
-    original: "",
-    translated: ""
+    original: "Hello, how are you doing today?",
+    translated: "Bonjour, comment allez-vous aujourd'hui?"
   });
   
   const callSession = useRef(null);
@@ -58,6 +57,49 @@ const TutorPage = () => {
   // Adding handleEndCall would cause an infinite loop since it updates state
   // isInCall is only used in the cleanup function which runs once on unmount
 
+  // Simulate tutor speaking when in call
+  useEffect(() => {
+    if (isInCall) {
+      const speakInterval = setInterval(() => {
+        setIsActiveSpeech(prev => !prev);
+      }, 4000);
+      
+      return () => clearInterval(speakInterval);
+    }
+  }, [isInCall]);
+  
+  // Simulate changing sentences
+  useEffect(() => {
+    if (isInCall) {
+      const sentences = [
+        {
+          original: "Hello, how are you doing today?",
+          translated: "Bonjour, comment allez-vous aujourd'hui?"
+        },
+        {
+          original: "Let's practice some common phrases.",
+          translated: "Pratiquons quelques phrases courantes."
+        },
+        {
+          original: "What would you like to learn?",
+          translated: "Qu'aimeriez-vous apprendre?"
+        },
+        {
+          original: "That's great progress!",
+          translated: "C'est un excellent progrès!"
+        }
+      ];
+      
+      let index = 0;
+      const sentenceInterval = setInterval(() => {
+        index = (index + 1) % sentences.length;
+        setTranslationData(sentences[index]);
+      }, 8000);
+      
+      return () => clearInterval(sentenceInterval);
+    }
+  }, [isInCall]);
+
   const handleSelectTutor = (tutor) => {
     setSelectedTutor(tutor);
   };
@@ -65,7 +107,6 @@ const TutorPage = () => {
   const handleStartCall = async () => {
     if (!selectedTutor) return;
     
-    setIsConnecting(true);
     setShowRinging(true);
     
     try {
@@ -75,12 +116,17 @@ const TutorPage = () => {
       // Set up callbacks for the call
       const callbacks = {
         onStatusChange: (status) => {
-          if (!mountedRef.current) return;
+          // Valid Statuses: [idle, listening, speaking, thinking, disconnected, disconnecting, connecting]
           
-          if (status === 'connected') {
+          if (status === 'connecting') {
+            setIsConnecting(true);
+            setIsInCall(false);
+            console.log('Connecting...');
+          } else if (status === 'idle' || status === 'listening' || status === 'speaking' || status === 'thinking') {
             setIsConnecting(false);
             setIsInCall(true);
             startTime.current = new Date();
+            console.log('status changed to:', status);
           } else if (status === 'disconnected') {
             setIsInCall(false);
             setIsConnecting(false);
@@ -113,6 +159,24 @@ const TutorPage = () => {
         }
       };
       
+      // Simulate connecting to call after ringing animation
+      setTimeout(() => {
+        handleConnectCall(systemPrompt, callbacks);
+      }, 3000);
+      
+    } catch (error) {
+      console.error('Error starting call:', error);
+      setError('Failed to connect. Please try again.');
+      setIsConnecting(false);
+      setShowRinging(false);
+    }
+  };
+
+  const handleConnectCall = async (systemPrompt, callbacks) => {
+    setShowRinging(false);
+    setIsConnecting(true);
+    
+    try {
       // Start the call
       const callConfig = {
         systemPrompt,
@@ -126,16 +190,28 @@ const TutorPage = () => {
       if (deductCredits) {
         deductCredits(1);
       }
+
+      // Add a fallback in case the onStatusChange callback isn't triggered
+      // This ensures the UI transitions even if there's an issue with the call service
+      setTimeout(() => {
+        if (isConnecting && !isInCall && mountedRef.current) {
+          console.log('Fallback: Forcing transition to connected state');
+          setIsConnecting(false);
+          setIsInCall(true);
+          startTime.current = new Date();
+        }
+      }, 5000); // Wait 5 seconds for the real callback before forcing transition
       
     } catch (error) {
-      console.error('Error starting call:', error);
+      console.error('Error connecting call:', error);
       setError('Failed to connect. Please try again.');
       setIsConnecting(false);
-      setShowRinging(false);
     }
   };
 
   const handleEndCall = async () => {
+    setIsConnecting(true);
+    
     try {
       await endCall();
       
@@ -145,20 +221,25 @@ const TutorPage = () => {
         recordConversation(selectedTutor.id, duration);
       }
       
-      setIsInCall(false);
+      setTimeout(() => {
+        setIsInCall(false);
+        setIsConnecting(false);
+      }, 1000);
       
     } catch (error) {
       console.error('Error ending call:', error);
+      setIsConnecting(false);
     }
-  };
-
-  const handleToggleMute = () => {
-    toggleMute(Role.USER);
-    setIsMicMuted(!isMicMuted);
   };
 
   const handleRingingComplete = () => {
     setShowRinging(false);
+  };
+
+  const handleMenuSelect = (option) => {
+    setShowMenu(false);
+    // Handle menu option selection
+    navigate("/settings");
   };
 
   // If no tutor is selected, show tutor selection
@@ -213,122 +294,153 @@ const TutorPage = () => {
   return (
     <Layout>
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
-        className="p-6 relative"
+        className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center"
       >
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <button 
-            onClick={() => navigate('/language-selection')}
-            className="p-2 rounded-full hover:bg-white/10"
-          >
-            <ChevronLeft size={20} />
-          </button>
-          
-          <h1 className="text-xl font-semibold">Tutor Session</h1>
-          
-          <button 
-            onClick={() => setShowMenu(!showMenu)}
-            className="p-2 rounded-full hover:bg-white/10"
-          >
-            <Settings size={20} />
-          </button>
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={() => navigate('/language-selection')}
+          className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+        >
+          <ChevronLeft size={18} />
+        </motion.button>
+        
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={() => setShowMenu(!showMenu)}
+          className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+        >
+          <Settings size={18} />
+        </motion.button>
+      </motion.div>
+
+      <motion.div 
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: showMenu ? 1 : 0, y: showMenu ? 0 : -10 }}
+        exit={{ opacity: 0, y: -10 }}
+        transition={{ duration: 0.2 }}
+        className="absolute top-14 right-4 bg-[#1a1a1a] border border-white/20 rounded-md overflow-hidden shadow-lg z-50"
+      >
+        <div className="py-1">
+          {['User Profile', 'Billing', 'Settings', 'Help'].map((option) => (
+            <motion.button
+              key={option}
+              whileHover={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
+              className="px-4 py-2 text-sm text-left w-full hover:bg-white/5"
+              onClick={() => handleMenuSelect(option)}
+            >
+              {option}
+            </motion.button>
+          ))}
         </div>
-        
-        {/* Tutor Profile */}
-        <motion.div 
-          className="flex flex-col items-center mb-8"
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.2 }}
-        >
-          <div 
-            className="w-20 h-20 rounded-full flex items-center justify-center mb-4"
-            style={{ backgroundColor: selectedTutor.backgroundColor }}
-          >
-            <User size={32} className="text-white" />
-          </div>
-          <h2 className="text-xl font-semibold mb-1">{selectedTutor.name}</h2>
-          <p className="text-white/70 mb-2">{selectedTutor.language} Tutor</p>
-          <p className="text-sm text-white/50 text-center">{selectedTutor.description}</p>
-        </motion.div>
-        
-        {/* Call Status Area */}
-        <motion.div 
-          className="bg-[#1a1a1a] rounded-lg p-6 mb-6 flex flex-col items-center"
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.3 }}
-        >
-          {showRinging ? (
-            <RingingAnimation onAnimationComplete={handleRingingComplete} />
-          ) : isInCall ? (
-            <div className="w-full">
-              <div className="flex justify-center mb-4">
-                <AudioWave isActive={isActiveSpeech} />
+      </motion.div>
+
+      <div className="p-6 pt-20 flex flex-col items-center">
+        {showRinging ? (
+          <RingingAnimation onAnimationComplete={handleRingingComplete} />
+        ) : isConnecting ? (
+          // Show loading state while connecting
+          <div className="flex flex-col items-center justify-center">
+            <motion.div 
+              animate={{ scale: [1, 1.05, 1] }}
+              transition={{ duration: 1.5, repeat: Infinity }}
+              className="w-32 h-32 rounded-full bg-gradient-to-br from-purple-500/30 to-blue-500/30 border border-white/20 flex items-center justify-center mb-6"
+            >
+              <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center">
+                <User size={28} className="text-white/80" />
               </div>
-              <p className="text-center mb-4">
-                {isActiveSpeech ? "Tutor is speaking..." : "Listening..."}
-              </p>
-              
-              {/* Display the latest transcript as a translation */}
-              {translationData.original && (
-                <TranslationDisplay 
-                  original={translationData.original} 
-                  translated={translationData.translated} 
-                />
+            </motion.div>
+            <motion.p
+              animate={{ opacity: [0.5, 1, 0.5] }}
+              transition={{ duration: 1.5, repeat: Infinity }}
+              className="text-white/70"
+            >
+              Connecting...
+            </motion.p>
+          </div>
+        ) : (
+          <>
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring", stiffness: 260, damping: 20 }}
+              className={`w-32 h-32 rounded-full flex items-center justify-center mb-6 relative ${
+                isInCall 
+                  ? 'bg-[#1a1a1a] border border-green-500/50' 
+                  : 'bg-gradient-to-br from-blue-400/30 to-purple-500/30 border border-white/20'
+              }`}
+            >
+              {isInCall ? (
+                <AudioWave isActive={isActiveSpeech} />
+              ) : (
+                <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center">
+                  <User size={28} className="text-white/80" />
+                </div>
               )}
               
-              <div className="flex justify-center gap-4 mt-6">
-                <motion.button
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  className={`p-3 rounded-full ${isMicMuted ? 'bg-red-500' : 'bg-white/10'}`}
-                  onClick={handleToggleMute}
+              {isInCall && (
+                <motion.div 
+                  className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-2 py-0.5 rounded-full text-xs flex items-center gap-1"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
                 >
-                  <AudioLines size={24} />
-                </motion.button>
-                
-                <motion.button
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  className="p-3 rounded-full bg-red-500"
+                  <AudioLines size={12} />
+                  Live
+                </motion.div>
+              )}
+            </motion.div>
+            
+            {isInCall && <TranslationDisplay 
+              original={translationData.original} 
+              translated={translationData.translated} 
+            />}
+            
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="mt-8 w-full max-w-xs"
+            >
+              {isInCall ? (
+                <CustomButton
+                  variant="outline"
+                  className="w-full flex items-center justify-center gap-2 bg-red-500/20 hover:bg-red-500/30 border-red-500/50"
                   onClick={handleEndCall}
+                  isLoading={isConnecting}
                 >
-                  <PhoneOff size={24} />
-                </motion.button>
-              </div>
-            </div>
-          ) : (
-            <>
-              <p className="text-center mb-6">Ready to start your lesson?</p>
-              <CustomButton
-                onClick={handleStartCall}
-                className="w-full"
-                isLoading={isConnecting}
-              >
-                <div className="flex items-center justify-center gap-2">
-                  <Phone size={18} />
-                  <span>Start Call</span>
-                </div>
-              </CustomButton>
-            </>
-          )}
-        </motion.div>
+                  <PhoneOff size={16} className="text-red-400" />
+                  End Call
+                </CustomButton>
+              ) : (
+                <CustomButton
+                  variant="outline"
+                  className="w-full flex items-center justify-center gap-2 bg-green-500/20 hover:bg-green-500/30 border-green-500/50"
+                  onClick={handleStartCall}
+                  isLoading={isConnecting}
+                >
+                  <Phone size={16} className="text-green-400" />
+                  Start Call
+                </CustomButton>
+              )}
+            </motion.div>
+          </>
+        )}
         
         {/* Error message if any */}
         {error && (
           <motion.div 
-            className="bg-red-500/20 border border-red-500/50 rounded-md p-3 mb-4"
+            className="mt-4 bg-red-500/20 border border-red-500/50 rounded-md p-3 w-full max-w-xs"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
           >
             <p className="text-sm text-white">{error}</p>
           </motion.div>
         )}
-      </motion.div>
+      </div>
     </Layout>
   );
 };

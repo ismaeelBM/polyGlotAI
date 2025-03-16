@@ -7,13 +7,21 @@ const RingingAnimation = ({ onAnimationComplete }) => {
   const audioRef = useRef(null);
   
   useEffect(() => {
-    // Play sound and store reference to control it
-    audioRef.current = playRingSound();
+    // Try to play sound, but catch any errors silently
+    try {
+      audioRef.current = playRingSound();
+    } catch (err) {
+      console.error("Could not play sound:", err);
+    }
     
     // Clean up when component unmounts
     return () => {
       if (audioRef.current) {
-        audioRef.current.pause();
+        try {
+          audioRef.current.pause();
+        } catch (err) {
+          console.error("Error pausing audio:", err);
+        }
         audioRef.current = null;
       }
     };
@@ -31,9 +39,13 @@ const RingingAnimation = ({ onAnimationComplete }) => {
         }}
         onAnimationComplete={() => {
           if (audioRef.current) {
-            audioRef.current.pause();
+            try {
+              audioRef.current.pause();
+            } catch (err) {
+              console.error("Error pausing audio:", err);
+            }
           }
-          onAnimationComplete();
+          if (onAnimationComplete) onAnimationComplete();
         }}
       >
         <div className="relative">

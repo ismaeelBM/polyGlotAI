@@ -10,16 +10,16 @@ const TranslationDisplay = ({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="mt-6 p-4 bg-[#1a1a1a] rounded-lg border border-white/10"
+      className="w-full max-w-xs mt-6 p-4 bg-[#1a1a1a] rounded-lg border border-white/10"
     >
       <div className="mb-4">
-        <p className="text-sm text-white/60 mb-1">English</p>
-        <p className="text-white text-base">{original}</p>
+        <p className="text-xs text-white/60 mb-1">Original</p>
+        <p className="text-white text-sm">{original}</p>
       </div>
       
       <div className="pt-3 border-t border-white/10">
-        <p className="text-sm text-white/60 mb-1">Translation</p>
-        <p className="text-green-400 text-base">{translated}</p>
+        <p className="text-xs text-white/60 mb-1">Translation</p>
+        <p className="text-green-400 text-sm">{translated}</p>
       </div>
     </motion.div>
   );

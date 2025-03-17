@@ -152,7 +152,7 @@ function getFlagForLanguage(language) {
     'Italian': '🇮🇹',
     'Japanese': '🇯🇵',
     'Spanish': '🇪🇸',
-    'English (Indian)': '🇮🇳',
+    'Hindi': '🇮🇳',
     'English (Nigerian)': '🇳🇬',
     'Portuguese': '🇵🇹',
     'Arabic': '🇪🇬',

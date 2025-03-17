@@ -137,45 +137,6 @@ const TutorPage = () => {
           
           // Log full transcript array
           // console.log('Full transcripts:', newTranscripts);
-          
-          // Update translation data with the latest transcript
-          if (newTranscripts && newTranscripts.length > 0) {
-            const latestTranscript = newTranscripts[newTranscripts.length - 1];
-            
-            // Log the latest transcript details
-            console.log('Latest transcript:', {
-              text: latestTranscript.text,
-              speaker: latestTranscript.speaker,
-              isFinal: latestTranscript.isFinal,
-              medium: latestTranscript.medium
-            });
-            
-            // Handle both user and agent transcripts
-            if (latestTranscript.speaker === Role.AGENT) {
-              setIsActiveSpeech(true);
-              
-              // Update translation for agent speech
-              setTranslationData({
-                original: latestTranscript.text,
-                translated: `Translation of: ${latestTranscript.text}`,
-                pronunciation: "Pronunciation not available"
-              });
-              
-              // Simulate speech ending after a delay
-              setTimeout(() => {
-                if (mountedRef.current) {
-                  setIsActiveSpeech(false);
-                }
-              }, latestTranscript.text.length * 100);
-            } else if (latestTranscript.role === Role.USER) {
-              // Update translation for user speech
-              setTranslationData({
-                original: latestTranscript.text,
-                translated: `Translation of user: ${latestTranscript.text}`,
-                pronunciation: "Pronunciation not available"
-              });
-            }
-          }
         }
       };
       
@@ -248,10 +209,10 @@ const TutorPage = () => {
   // DEBUG ONLY: Simulate a call with sample data (for testing)
   const simulateCall = () => {
     const sampleTranscripts = [
-      { role: Role.USER, text: "Hello, how are you?", isFinal: true, medium: "audio" },
-      { role: Role.AGENT, text: "Bonjour! Je vais bien, merci. Et vous?", isFinal: true, medium: "audio" },
-      { role: Role.USER, text: "I'm good. Can you teach me some French words?", isFinal: true, medium: "audio" },
-      { role: Role.AGENT, text: "Bien sûr! Let's start with some basic greetings.", isFinal: true, medium: "audio" }
+      { speaker: Role.USER, text: "Hello, how are you?", isFinal: true, medium: "audio" },
+      { speaker: Role.AGENT, text: "Bonjour! Je vais bien, merci. Et vous?", isFinal: true, medium: "audio" },
+      { speaker: Role.USER, text: "I'm good. Can you teach me some French words?", isFinal: true, medium: "audio" },
+      { speaker: Role.AGENT, text: "Bien sûr! Let's start with some basic greetings.", isFinal: true, medium: "audio" }
     ];
     
     const sampleSummary = {

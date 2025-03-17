@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, Settings, LogOut, Volume2, Moon, Sun, MessageSquareText } from 'lucide-react';
+import { ChevronLeft, Settings, LogOut, Volume2, Moon, Sun } from 'lucide-react';
 import Layout from '../components/Layout';
 import CustomButton from '../components/ui/custom-button';
 import { useAuth } from '../contexts/AuthContext';
@@ -125,20 +125,6 @@ const SettingsPage = () => {
               <p className="text-sm text-white/70">{user.email || 'Anonymous'}</p>
             </div>
           )}
-          
-          {/* Conversation Logs Button */}
-          <div className="pt-4">
-            <CustomButton
-              variant="outline"
-              className="w-full mb-4"
-              onClick={() => navigate('/conversation-logs')}
-            >
-              <div className="flex items-center justify-center gap-2">
-                <MessageSquareText size={18} />
-                <span>Conversation Logs</span>
-              </div>
-            </CustomButton>
-          </div>
           
           {/* Logout Button */}
           <div className="pt-4">

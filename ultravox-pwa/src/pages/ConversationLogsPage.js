@@ -35,7 +35,7 @@ const ConversationLogsPage = () => {
       >
         <div className="flex items-center mb-6">
           <button 
-            onClick={() => navigate('/settings')}
+            onClick={() => navigate('/tutor')}
             className="p-2 rounded-full hover:bg-white/10"
           >
             <ChevronLeft size={24} />

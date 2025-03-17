@@ -42,9 +42,6 @@ const TutorPage = () => {
   // If no tutor is selected, show a list of tutors for selection
   const [tutorOptions, setTutorOptions] = useState([]);
   
-  // Add state for storing all transcripts
-  const [transcriptHistory, setTranscriptHistory] = useState([]);
-  
   // Handle cleanup when component unmounts
   useEffect(() => {
     // If no tutor is selected, prepare tutor options
@@ -140,9 +137,6 @@ const TutorPage = () => {
           
           // Log full transcript array
           // console.log('Full transcripts:', newTranscripts);
-          
-          // Store all transcripts in state
-          setTranscriptHistory(newTranscripts);
           
           // Update translation data with the latest transcript
           if (newTranscripts && newTranscripts.length > 0) {
@@ -240,18 +234,6 @@ const TutorPage = () => {
     try {
       await endCall();
       
-      // Record the conversation if needed
-      if (startTime.current && recordConversation) {
-        console.log('EndCall: Recording conversation');
-        const duration = Math.round((new Date() - startTime.current) / 1000);
-        recordConversation(
-          selectedTutor.id,
-          duration,
-          transcriptHistory,
-          summary.current
-        );
-      }
-      
       setTimeout(() => {
         setIsInCall(false);
         setIsConnecting(false);
@@ -288,7 +270,7 @@ const TutorPage = () => {
     
     // Record a simulated conversation
     recordConversation(
-      selectedTutor.id,
+      selectedTutor,
       5 * 60, // 5 minutes
       sampleTranscripts,
       sampleSummary
@@ -304,7 +286,11 @@ const TutorPage = () => {
   const handleMenuSelect = (option) => {
     setShowMenu(false);
     // Handle menu option selection
-    navigate("/settings");
+    if (option === 'Conversation Logs') {
+      navigate("/conversation-logs");
+    } else if (option === 'Settings') {
+      navigate("/settings");
+    }
   };
 
   // If no tutor is selected, show tutor selection
@@ -391,7 +377,7 @@ const TutorPage = () => {
         className="absolute top-14 right-4 bg-[#1a1a1a] border border-white/20 rounded-md overflow-hidden shadow-lg z-50"
       >
         <div className="py-1">
-          {['User Profile', 'Billing', 'Settings', 'Help'].map((option) => (
+          {['User Profile', 'Billing', 'Settings', 'Conversation Logs', 'Help'].map((option) => (
             <motion.button
               key={option}
               whileHover={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}

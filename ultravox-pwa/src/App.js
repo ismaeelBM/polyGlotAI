@@ -13,6 +13,12 @@ import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import SettingsPage from './pages/SettingsPage';
 import NotFoundPage from './pages/NotFoundPage';
+import ConversationLogsPage from './pages/ConversationLogsPage';
+import LanguageLogsPage from './pages/LanguageLogsPage';
+import FullLogsView from './pages/FullLogsView';
+import ConversationView from './pages/ConversationView';
+import WordsLearnedView from './pages/WordsLearnedView';
+import SentencesView from './pages/SentencesView';
 
 const AnimatedRoutes = () => {
   const location = useLocation();
@@ -26,6 +32,12 @@ const AnimatedRoutes = () => {
         <Route path="/language-selection" element={<LanguageSelectionPage />} />
         <Route path="/tutor" element={<TutorPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/conversation-logs" element={<ConversationLogsPage />} />
+        <Route path="/conversation-logs/:languageId" element={<LanguageLogsPage />} />
+        <Route path="/conversation-logs/:languageId/full" element={<FullLogsView />} />
+        <Route path="/conversation-logs/:languageId/full/:date/:conversationId" element={<ConversationView />} />
+        <Route path="/conversation-logs/:languageId/words" element={<WordsLearnedView />} />
+        <Route path="/conversation-logs/:languageId/sentences" element={<SentencesView />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </AnimatePresence>

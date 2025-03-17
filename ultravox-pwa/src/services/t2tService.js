@@ -89,7 +89,7 @@ export async function getSummary(transcript) {
           {
             "original": "sentence here",
             "translation": "translation here",
-            "pronounciation": "Pronounciation of the sentence here"
+            "pronunciation": "Pronounciation of the sentence here"
           },
           ...
         ],
@@ -98,7 +98,7 @@ export async function getSummary(transcript) {
           {
             "original": "word here",
             "translation": "translation here",
-            "pronounciation": "Pronounciation of the word here"
+            "pronunciation": "Pronounciation of the word here"
           },
           ...
         ]
@@ -107,6 +107,7 @@ export async function getSummary(transcript) {
     The words must contain all the words discussed in sentences but broken down into individual words.
     And any individual words that has been translated must also be included in the words array.
     If any words does not have a direct translation, do not include it in the words array.
+    Only break down words and its translation if that translation is correct in an of itself without the context of the sentence.
     
     DO NOT give any other outputs. If no words are being discussed, return null.
     Here is the transcript as a json object:

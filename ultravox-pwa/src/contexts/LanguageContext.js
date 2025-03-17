@@ -57,7 +57,7 @@ export function LanguageProvider({ children }) {
     {
       id: 5,
       name: "Monika",
-      language: "English (Indian)",
+      language: "Hindi",
       specialty: "Business Communication",
       description: "A professional with expertise in business English and formal communication. Perfect for professional settings.",
       avatar: "https://ui-avatars.com/api/?name=Monika&background=8b5cf6&color=fff",

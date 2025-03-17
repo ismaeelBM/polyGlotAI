@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, User, Phone, PhoneOff, Settings, AudioLines } from 'lucide-react';
+import { ChevronLeft, User, Phone, PhoneOff, Settings, AudioLines, MessageSquareText } from 'lucide-react';
 import Layout from '../components/Layout';
 import CustomButton from '../components/ui/custom-button';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -37,6 +37,7 @@ const TutorPage = () => {
   const callSession = useRef(null);
   const startTime = useRef(null);
   const mountedRef = useRef(true);
+  const summary = useRef(null);
 
   // If no tutor is selected, show a list of tutors for selection
   const [tutorOptions, setTutorOptions] = useState([]);
@@ -108,8 +109,16 @@ const TutorPage = () => {
                 }
               }
             } else if (status === 'disconnecting') {
-              const summary = await getSummary(transcripts);
-              console.log('summary:', summary);
+              const summaryData = await getSummary(transcripts);
+              console.log('summary:', summaryData);
+              summary.current = summaryData;
+              const duration = Math.round((new Date() - startTime.current) / 1000);
+              recordConversation(
+                selectedTutor,
+                duration,
+                transcripts,
+                summaryData
+              );
             }
           }
           if (status === 'connecting') {
@@ -119,7 +128,6 @@ const TutorPage = () => {
           } else if (status === 'idle' || status === 'listening' || status === 'speaking' || status === 'thinking') {
             setIsConnecting(false);
             setIsInCall(true);
-            startTime.current = new Date();
             console.log('status changed to:', status);
           } else if (status === 'disconnected') {
             setIsInCall(false);
@@ -143,13 +151,13 @@ const TutorPage = () => {
             // Log the latest transcript details
             console.log('Latest transcript:', {
               text: latestTranscript.text,
-              role: latestTranscript.role,
+              speaker: latestTranscript.speaker,
               isFinal: latestTranscript.isFinal,
               medium: latestTranscript.medium
             });
             
             // Handle both user and agent transcripts
-            if (latestTranscript.role === Role.AGENT) {
+            if (latestTranscript.speaker === Role.AGENT) {
               setIsActiveSpeech(true);
               
               // Update translation for agent speech
@@ -228,14 +236,20 @@ const TutorPage = () => {
 
   const handleEndCall = async () => {
     setIsConnecting(true);
-    
+    console.log('Ending call');
     try {
       await endCall();
       
       // Record the conversation if needed
       if (startTime.current && recordConversation) {
+        console.log('EndCall: Recording conversation');
         const duration = Math.round((new Date() - startTime.current) / 1000);
-        recordConversation(selectedTutor.id, duration);
+        recordConversation(
+          selectedTutor.id,
+          duration,
+          transcriptHistory,
+          summary.current
+        );
       }
       
       setTimeout(() => {
@@ -247,6 +261,40 @@ const TutorPage = () => {
       console.error('Error ending call:', error);
       setIsConnecting(false);
     }
+  };
+
+  // DEBUG ONLY: Simulate a call with sample data (for testing)
+  const simulateCall = () => {
+    const sampleTranscripts = [
+      { role: Role.USER, text: "Hello, how are you?", isFinal: true, medium: "audio" },
+      { role: Role.AGENT, text: "Bonjour! Je vais bien, merci. Et vous?", isFinal: true, medium: "audio" },
+      { role: Role.USER, text: "I'm good. Can you teach me some French words?", isFinal: true, medium: "audio" },
+      { role: Role.AGENT, text: "Bien sûr! Let's start with some basic greetings.", isFinal: true, medium: "audio" }
+    ];
+    
+    const sampleSummary = {
+      language: selectedTutor.language,
+      words: [
+        { original: "Bonjour", translation: "Hello", pronunciation: "bohn-ZHOOR" },
+        { original: "Je vais bien", translation: "I'm doing well", pronunciation: "zhuh vay bee-YEN" },
+        { original: "Et vous", translation: "And you", pronunciation: "ay VOO" }
+      ],
+      sentences: [
+        { original: "Bonjour! Je vais bien, merci. Et vous?", 
+          translation: "Hello! I'm doing well, thank you. And you?", 
+          pronunciation: "bohn-ZHOOR! zhuh vay bee-YEN, mehr-SEE. ay VOO?" }
+      ]
+    };
+    
+    // Record a simulated conversation
+    recordConversation(
+      selectedTutor.id,
+      5 * 60, // 5 minutes
+      sampleTranscripts,
+      sampleSummary
+    );
+    
+    console.log('Simulated call recorded');
   };
 
   const handleRingingComplete = () => {
@@ -445,6 +493,25 @@ const TutorPage = () => {
                 </CustomButton>
               )}
             </motion.div>
+            
+            {/* Test button for debugging - only in development */}
+            {process.env.NODE_ENV !== 'production' && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.3 }}
+                className="mt-2 w-full max-w-xs"
+              >
+                <CustomButton
+                  variant="outline"
+                  className="w-full flex items-center justify-center gap-2 bg-purple-500/20 hover:bg-purple-500/30 border-purple-500/50"
+                  onClick={simulateCall}
+                >
+                  <MessageSquareText size={16} className="text-purple-400" />
+                  Test: Add Sample Log
+                </CustomButton>
+              </motion.div>
+            )}
           </>
         )}
         

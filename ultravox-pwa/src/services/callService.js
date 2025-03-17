@@ -34,6 +34,7 @@ export function toggleMute(role) {
  * Simplified to not depend on scenario or difficulty level
  */
 export function generateSystemPrompt(tutor) {
+  console.log('Tutor language: ', tutor.language, 'Tutor specialty: ', tutor.specialty);
   return `You are ${tutor.name}, a ${tutor.language} language learning assistant specializing in ${tutor.specialty}. 
 Your role is to help the student practice ${tutor.language}.
 

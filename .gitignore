@@ -1,3 +1,47 @@
-/lingua-voice-mvp/node_modules
-/lingua-voice-mvp
-PolyGlotAI_Prototype/setup_project.py
+# Node modules
+node_modules/
+**/node_modules
+./my-expo-app/node_modules
+./proxy-server/node_modules
+
+# Expo
+./my-expo-app/.expo/
+./my-expo-app/.expo-shared/
+dist/
+web-build/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+
+# React / JavaScript
+build/
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# macOS
+.DS_Store
+*.pem
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Testing
+coverage/
+
+# Temporary files
+*.log
+*.tmp
+.tmp/
+.temp/

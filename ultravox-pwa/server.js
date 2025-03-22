@@ -22,6 +22,40 @@ app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'ok', message: 'Ultravox PWA Backend API is running' });
 });
 
+// Add endpoint for egg price calculation
+app.post('/api/calculate-price', (req, res) => {
+  try {
+    console.log('Received egg price calculation request:', req.body);
+    // Get quantity from query parameter
+    const quantity = parseInt(req.body.quantity);
+
+    if (isNaN(quantity) || quantity < 1) {
+      return res.status(400).json({
+        error: 'Invalid quantity',
+        message: 'Quantity must be a positive integer'
+      });
+    }
+
+    // Set price per egg (could be stored in a database or env variable)
+    const pricePerEgg = 0.50; // 50 cents per egg
+    const totalPrice = (quantity * pricePerEgg).toFixed(2);
+
+    // Return the calculated price
+    res.status(200).json({
+      quantity,
+      pricePerEgg,
+      totalPrice,
+      currency: 'USD'
+    });
+  } catch (error) {
+    console.error('Error calculating egg price:', error.message);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: error.message
+    });
+  }
+});
+
 // Proxy endpoint for Ultravox API calls
 app.post('/api/ultravox/calls', async (req, res) => {
   try {

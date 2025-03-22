@@ -1,5 +1,28 @@
 # Ultravox Language Learning PWA
 
+## LATEST RUN COMMANDS
+
+Run each of the following in seperate terminals
+`npm run ngrok-start`
+`node .\server.js`
+
+Run the following command based on the port `node .\server.js` is running:
+`.\ngrok.exe http [PORT]` 
+e.g.
+`.\ngrok.exe http 6996`
+
+Copy the server link from the above command and replace the value in REACT_APP_BACKEND_URL in .env and save
+
+Run the following command in a different terminal:
+`vercel --prod`
+
+Now open the your website link. If an existing window already there make sure you do a full refresh of the page, e.g. Ctrl+Shift+R
+
+To run things locally run `npm start`
+
+Note: Run all commands above under the ultravox-pwa directory
+
+
 A Progressive Web App for practicing languages with AI tutors in realistic conversation scenarios.
 
 ## Features

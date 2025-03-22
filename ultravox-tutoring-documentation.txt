@@ -1,0 +1,205 @@
+# Ultravox API Implementation: Language Tutoring & Testing Mode
+
+## Overview
+
+This document outlines how to implement a language tutoring and testing mode in a polyglot application using Ultravox API's Call Stages functionality. The implementation allows the application to transition between normal conversation and a structured testing mode when a user requests to be tested on their language skills.
+
+## Call Stages Implementation
+
+Ultravox's Call Stages functionality enables dynamic, multi-stage conversations with different system prompts, tools, and conversation parameters for each stage. This is ideal for implementing a tutoring mode that requires a structured Q&A format.
+
+### Understanding Call Stages
+
+As documented in the Ultravox API:
+- Call Stages provide a way to segment a conversation into distinct phases, each with its own system prompt and different parameters
+- Stages allow you to give granular system prompts to the model as the conversation progresses
+- You have full control to determine when and how the conversation progresses to the next stage
+- New stages inherit all properties from the previous stage unless explicitly overridden
+
+### Stage Design for Language Tutoring
+
+For a language tutoring application, we recommend the following stages:
+
+1. **Normal Conversation Stage**
+   - Default conversation mode
+   - Detects user requests for language testing/tutoring
+
+2. **Test Initialization Stage**
+   - Explains the testing process to the user
+   - Confirms language and proficiency level
+   - Sets up the testing parameters
+
+3. **Testing Stage**
+   - Presents questions to the user based on their level
+   - Evaluates responses
+   - Tracks correct/incorrect answers
+
+4. **Test Results Stage**
+   - Summarizes test performance
+   - Provides feedback and recommendations
+   - Offers to continue practice or return to normal conversation
+
+## Implementation Steps
+
+### 1. Plan Your Stages
+
+As recommended in Ultravox documentation, first determine the different phases of your conversation and what prompts or parameters should change at each stage. For a language tutoring application:
+
+- Main/Default Stage: General conversation, help with language questions
+- Test Initialization Stage: When user asks to be tested, gather language and level
+- Testing Stage: Present structured questions and evaluate answers
+- Results Stage: Provide feedback and assessment
+
+### 2. Create a Stage Change Tool
+
+```javascript
+function changeToTestingMode(requestBody) {
+  // Extract language, level, and other parameters from the request
+  const { language, level } = requestBody;
+  
+  // Define the new stage for testing mode
+  const responseBody = {
+    systemPrompt: `You are now in TESTING MODE for ${language} at ${level} level. 
+    Your role is to ask appropriate questions to test the user's knowledge of ${language}.
+    Ask one question at a time, wait for their response, then provide feedback before moving to the next question.
+    Track their performance to provide a final assessment after 5-10 questions.
+    Questions should focus on vocabulary, grammar, and sentence construction appropriate for ${level} level.`,
+    
+    // Optional: Change voice or other parameters if needed
+    // voice: "voice_id_for_language",
+    
+    // Tool result message that will appear in conversation history
+    toolResultText: `(Entering ${language} Testing Mode at ${level} level)`
+  };
+
+  return {
+    body: responseBody,
+    headers: {
+      'X-Ultravox-Response-Type': 'new-stage'
+    }
+  };
+}
+```
+
+### 3. Configure Call Creation
+
+When initializing the Ultravox call, include the stage change tool:
+
+```javascript
+{
+  systemPrompt: "You are a helpful polyglot AI assistant that can teach multiple languages. If the user asks to be tested or wants to practice a language, use the changeToTestingMode tool to switch to tutoring mode. In normal conversation, be helpful and respond in the language the user is using.",
+  selectedTools: [
+    {
+      "temporaryTool": {
+        "modelToolName": "changeToTestingMode",
+        "description": "Changes the conversation to a structured language testing mode when the user requests to be tested or practice",
+        "dynamicParameters": [
+          {
+            "name": "language",
+            "description": "The language to test (e.g., Spanish, French, German)"
+          },
+          {
+            "name": "level",
+            "description": "Proficiency level (beginner, intermediate, advanced)"
+          }
+        ]
+      }
+    },
+    // Add other tools as needed
+  ]
+}
+```
+
+### 4. End Test and Return to Normal Conversation
+
+Create another tool to end the test and return to normal conversation:
+
+```javascript
+function endTestingMode(requestBody) {
+  // Extract test results from the request
+  const { correct, total, feedback } = requestBody;
+  
+  // Define the stage to return to normal conversation
+  const responseBody = {
+    systemPrompt: "You are a helpful polyglot AI assistant that can teach multiple languages. If the user asks to be tested or wants to practice a language, use the changeToTestingMode tool to switch to tutoring mode. In normal conversation, be helpful and respond in the language the user is using.",
+    
+    // Tool result message summarizing test results
+    toolResultText: `(Test Completed: ${correct}/${total} correct. ${feedback})`
+  };
+
+  return {
+    body: responseBody,
+    headers: {
+      'X-Ultravox-Response-Type': 'new-stage'
+    }
+  };
+}
+```
+
+### 5. Handling State Between Stages
+
+Since stages operate within the same call, the conversation history is maintained between stages. For more complex state management, consider:
+
+- Using tool calls to track user progress
+- Storing test results in a database indexed by user ID
+- Passing state information in the tool request/response
+
+## Stage Properties
+
+According to Ultravox documentation, the following properties can be changed during a new stage:
+
+| Property           | Can be changed with new stage |
+|--------------------|-------------------------------|
+| systemPrompt       | Yes                           |
+| temperature        | Yes                           |
+| voice              | Yes                           |
+| languageHint       | Yes                           |
+| initialMessages    | Yes                           |
+| selectedTools      | Yes                           |
+| firstSpeaker       | No                            |
+| model              | No                            |
+| joinTimeout        | No                            |
+| maxDuration        | No                            |
+| timeExceededMessage| No                            |
+| inactivityMessages | No                            |
+| medium             | No                            |
+| recordingEnabled   | No                            |
+
+## API Endpoints for Stages
+
+When retrieving information about a call with stages, use the stage-centric API endpoints:
+
+| Ultravox API                | Stage-Centric Equivalent              |
+|-----------------------------|--------------------------------------|
+| Get Call                    | Get Call Stage                       |
+| List Call Messages          | List Call Stage Messages             |
+| List Call Tools             | List Call Stage Tools                |
+
+## Example Testing Flow
+
+1. User: "Can you test my Spanish skills?"
+2. Assistant: *Detects testing request and calls changeToTestingMode tool*
+3. *System transitions to Testing Initialization Stage*
+4. Assistant: "I'd be happy to test your Spanish! What level would you like to be tested at - beginner, intermediate, or advanced?"
+5. User: "Intermediate"
+6. *System processes level and prepares test questions*
+7. Assistant: "Great, I'll test your intermediate Spanish skills. Let's start: ¿Cuál es la diferencia entre 'ser' y 'estar'?"
+8. *Testing continues with questions and feedback*
+9. After sufficient questions, Assistant calls endTestingMode
+10. *System transitions back to normal conversation with test results*
+
+## Use Cases and Best Practices
+
+According to Ultravox documentation, Call Stages are particularly useful for:
+
+1. **Data Gathering** - Scenarios where the agent needs to collect a lot of data, like our language assessment
+2. **Switching Contexts** - Scenarios where the agent needs to navigate different contexts, such as transitioning between learning and testing modes
+
+Best Practices:
+
+1. Clearly indicate transitions between conversation modes to the user
+2. Store testing history for returning users to track progress
+3. Ensure prompts are detailed enough to guide the model's behavior in each stage
+4. Test thoroughly to ensure natural transitions between stages
+5. Consider including sample questions in the system prompt for consistency
+6. Remember new stages inherit all properties from the previous stage unless explicitly overridden 

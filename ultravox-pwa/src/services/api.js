@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Backend server URL - get from environment variable or default
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
+const BACKEND_URL = 'http://localhost:6996';
 
 // Create axios instance with default config
 const apiClient = axios.create({
@@ -24,6 +24,12 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+// Map tool names to API endpoints
+const toolEndpoints = {
+  changeToTestingMode: '/api/tools/changeToTestingMode',
+  endTestingMode: '/api/tools/endTestingMode'
+};
+
 // API helper with only the essential functions
 export const api = {
   /**
@@ -39,6 +45,28 @@ export const api = {
       return response.data;
     } catch (error) {
       console.error('Error creating call:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Execute a tool for Call Stages
+   * @param {string} toolName - The name of the tool to execute
+   * @param {Object} params - The parameters for the tool
+   * @returns {Promise<Object>} - Tool response data
+   */
+  executeToolForStage: async (toolName, params) => {
+    try {
+      if (!toolEndpoints[toolName]) {
+        throw new Error(`Unknown tool: ${toolName}`);
+      }
+      
+      console.log(`Executing ${toolName} tool with params:`, params);
+      const response = await apiClient.post(toolEndpoints[toolName], params);
+      console.log(`${toolName} executed successfully:`, response.data);
+      return response.data;
+    } catch (error) {
+      console.error(`Error executing ${toolName}:`, error);
       throw error;
     }
   }

@@ -7,6 +7,17 @@ let uvSession = null;
 // For debug messages (logs all experimental messages)
 const debugMessages = new Set(["debug"]);
 
+// Base URL for tool endpoints - should match server configuration
+// In production, this should be your ngrok or publicly accessible HTTPS URL
+// Force HTTPS protocol - this is required by Ultravox
+const TOOL_BASE_URL = process.env.REACT_APP_TOOL_BASE_URL || 
+  (window.location.origin.includes('localhost') 
+    ? `https://${window.location.hostname}:${window.location.port}`
+    : window.location.origin);
+
+// Log the tool base URL to debug
+console.log('Client using tool base URL:', TOOL_BASE_URL);
+
 /**
  * Toggle mute state for either user (mic) or agent (speaker)
  */
@@ -31,23 +42,18 @@ export function toggleMute(role) {
 
 /**
  * Create a system prompt based on the tutor information
- * Simplified to not depend on scenario or difficulty level
+ * Includes instructions for using the testing mode tool when user requests
  */
 export function generateSystemPrompt(tutor) {
   console.log('Tutor language: ', tutor.language, 'Tutor specialty: ', tutor.specialty);
-  return `You are ${tutor.name}, a ${tutor.language} language learning assistant who is proficient in both ${tutor.language} and English. 
-Your role is to teach the speaker ${tutor.language} and help them practice it.
+  return `You are an expert language tutor specializing in teaching ${tutor.language || 'multiple languages'}. 
+Your role is to help users learn the language through conversation and practice.
 
-Your goal is to:
-1. Have a conversation with the student in ${tutor.language}
-2. Ask what the student wants to learn today
-3. Teach the student what they want to learn breaking it down into small chunks
-4. Ask the student to practice what they've learned
-5. Correct the student's grammar and pronunciation
+If the user asks to be tested on their language skills or wants a quiz to practice, use the changeToTestingMode tool to switch to a structured testing mode. 
+Do not simulate the test - actually use the tool to change the conversation mode.
 
-When teaching a new word/sentence, go slowly and give let the student repeat it after you, before moving on to the next word/sentence.
-
-Start by greeting the student in ${tutor.language} and then in English. In your response, don't include any transliteration for foreign words.`;
+In testing mode, you'll present structured questions appropriate for their level and evaluate their responses.
+In normal conversation, be helpful, engaging, and respond primarily in ${tutor.language || 'the language the user is practicing'}.`;
 }
 
 /**
@@ -68,24 +74,80 @@ export async function createCall(callConfig) {
       timeExceededMessage: "Our conversation has reached its time limit. Thank you for chatting with me.",
       recordingEnabled: false,
       transcriptOptional: false,
-      // firstSpeakerSettings: {
-      //   agent: {
-      //     uninterruptible: false,
-      //     text: "Hello! I'm your language tutor. How can I help you today?"
-      //   }
-      // },
-      // inactivityMessages: [
-      //   {
-      //     duration: "10s",
-      //     message: "Are you still there?",
-      //     endBehavior: "END_BEHAVIOR_UNSPECIFIED"
-      //   }
-      // ],
-      // vadSettings: {
-      //   turnEndpointDelay: "1s",
-      //   minimumTurnDuration: "1s",
-      //   minimumInterruptionDuration: "1s"
-      // }
+      selectedTools: [
+        {
+          "temporaryTool": {
+            "modelToolName": "changeToTestingMode",
+            "description": "Changes the conversation to a structured language testing mode when the user requests to be tested or practice",
+            "dynamicParameters": [
+              {
+                "name": "language",
+                "location": "PARAMETER_LOCATION_BODY",
+                "schema": {"type": "string", "description": "The language to test (e.g., Spanish, French, German)"},
+                "required": true
+              },
+              {
+                "name": "level",
+                "location": "PARAMETER_LOCATION_BODY",
+                "schema": {"type": "string", "description": "Proficiency level (beginner, intermediate, advanced)"},
+                "required": true
+              }
+            ],
+            "http": {
+              "baseUrlPattern": `${TOOL_BASE_URL}/api/tools/changeToTestingMode`,
+              "httpMethod": "POST"
+            }
+          }
+        },
+        {
+          "temporaryTool": {
+            "modelToolName": "endTestingMode",
+            "description": "Ends the testing mode and returns to normal conversation",
+            "dynamicParameters": [
+              {
+                "name": "correct",
+                "location": "PARAMETER_LOCATION_BODY",
+                "schema": {"type": "integer", "description": "Number of correct answers"},
+                "required": true
+              },
+              {
+                "name": "total",
+                "location": "PARAMETER_LOCATION_BODY",
+                "schema": {"type": "integer", "description": "Total number of questions asked"},
+                "required": true
+              },
+              {
+                "name": "feedback",
+                "location": "PARAMETER_LOCATION_BODY",
+                "schema": {"type": "string", "description": "Brief feedback on performance"},
+                "required": true
+              }
+            ],
+            "http": {
+              "baseUrlPattern": `${TOOL_BASE_URL}/api/tools/endTestingMode`,
+              "httpMethod": "POST"
+            }
+          }
+        }
+      ],
+      firstSpeakerSettings: {
+        agent: {
+          uninterruptible: false,
+          text: "Hello! I'm your language tutor. How can I help you with your language learning today?"
+        }
+      },
+      inactivityMessages: [
+        {
+          duration: "10s",
+          message: "Are you still there?",
+          endBehavior: "END_BEHAVIOR_UNSPECIFIED"
+        }
+      ],
+      vadSettings: {
+        turnEndpointDelay: "0.5s",
+        minimumTurnDuration: "0.5s",
+        minimumInterruptionDuration: "0.5s"
+      }
     };
     
     console.log('Creating call with parameters:', validAPIParams);

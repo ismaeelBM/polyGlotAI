@@ -39,10 +39,12 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
+    "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "server": "node server.js",
-    "ngrok-server": "node ngrok-server.js",
-    "ngrok-start": "node start-ngrok-server.js"
+    "dev:backend": "node server.js",
+    "dev": "concurrently \"npm run dev:backend\" \"npm start\"",
+    "ngrok": "ngrok http 6996 --log=stdout",
+    "dev:tunnel": "concurrently \"npm run dev:backend\" \"npm run ngrok\" \"npm start\""
   },
   "eslintConfig": {
     "extends": [

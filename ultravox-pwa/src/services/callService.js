@@ -4,6 +4,8 @@ import { UltravoxSession, Role } from 'ultravox-client';
 // Global reference to the current Ultravox session
 let uvSession = null;
 
+const TOOL_BASE_URL = process.env.REACT_APP_BACKEND_URL
+
 // For debug messages (logs all experimental messages)
 const debugMessages = new Set(["debug"]);
 
@@ -36,16 +38,18 @@ export function toggleMute(role) {
 export function generateSystemPrompt(tutor) {
   console.log('Tutor language: ', tutor.language, 'Tutor specialty: ', tutor.specialty);
   return `You are ${tutor.name}, a ${tutor.language} language learning assistant who is proficient in both ${tutor.language} and English. 
-Your role is to teach the speaker ${tutor.language} and help them practice it.
-
+Your role is to teach the speaker ${tutor.language} and help them practice it. Make sure you mostly speak in English since the user isn't proficient in ${tutor.language}.
+Only speak in ${tutor.language} when the user asks you to.
 Your goal is to:
-1. Have a conversation with the student in ${tutor.language}
+1. Have a conversation with the student in English and ${tutor.language}
 2. Ask what the student wants to learn today
 3. Teach the student what they want to learn breaking it down into small chunks
 4. Ask the student to practice what they've learned
 5. Correct the student's grammar and pronunciation
 
 When teaching a new word/sentence, go slowly and give let the student repeat it after you, before moving on to the next word/sentence.
+
+You have access to a tool called calculate_egg_price that can calculate the price of eggs based on quantity. When the user asks about the price of eggs, use this tool to provide an accurate response.
 
 Start by greeting the student in ${tutor.language} and then in English. In your response, don't include any transliteration for foreign words.`;
 }
@@ -54,6 +58,7 @@ Start by greeting the student in ${tutor.language} and then in English. In your 
  * Create a call via the backend server that proxies to the Ultravox API
  */
 export async function createCall(callConfig) {
+  console.log('TOOL_BASE_URL: ', TOOL_BASE_URL);
   try {
     // Extract only the parameters that the Ultravox API endpoint accepts
     const validAPIParams = {
@@ -68,6 +73,31 @@ export async function createCall(callConfig) {
       timeExceededMessage: "Our conversation has reached its time limit. Thank you for chatting with me.",
       recordingEnabled: false,
       transcriptOptional: false,
+      // Add custom tool configuration
+      selectedTools: [
+        {
+          // Using temporary tool approach for quick iteration
+          temporaryTool: {
+            modelToolName: "calculate_egg_price",
+            description: "Calculate the total price for a quantity of eggs",
+            dynamicParameters: [
+              {
+                name: "quantity",
+                location: "PARAMETER_LOCATION_BODY",
+                schema: {
+                  type: "string",
+                  description: "Number of eggs requested"
+                },
+                required: true
+              }
+            ],
+            http: {
+              baseUrlPattern: `${TOOL_BASE_URL}/api/calculate-price`,
+              httpMethod: "POST"
+            }
+          }
+        }
+      ],
       // firstSpeakerSettings: {
       //   agent: {
       //     uninterruptible: false,
